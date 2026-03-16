@@ -1,0 +1,20 @@
+{
+  "name": "claude-agent-sdlc",
+  "owner": {
+    "name": "Pavel Kachurka",
+    "email": "paulermo@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "agent-sdlc",
+      "description": "12 AI agents orchestrating a full SDLC pipeline from requirements to deployment",
+      "version": "1.0.0",
+      "author": {
+        "name": "Pavel Kachurka",
+        "email": "paulermo@users.noreply.github.com"
+      },
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "description": "Autonomous SDLC agent pipeline — orchestrates 12 specialized AI agents to drive software projects from requirements to deployment",
   "version": "1.0.0",
   "author": {
-    "name": "Paul Ermolenko",
+    "name": "Pavel Kachurka",
     "email": "paulermo@users.noreply.github.com"
   }
 }
