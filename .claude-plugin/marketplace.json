@@ -8,7 +8,7 @@
     {
       "name": "agent-sdlc",
       "description": "12 AI agents orchestrating a full SDLC pipeline from requirements to deployment",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Pavel Kachurka",
         "email": "paulermo@users.noreply.github.com"
