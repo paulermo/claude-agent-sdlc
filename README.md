@@ -26,10 +26,10 @@ A Claude Code plugin that orchestrates 12 specialized AI agents to drive softwar
 ### Workflow
 
 ```
-/sdlc:init  →  Configure project, create structure, define rules
-/sdlc:start →  PM reads state, dispatches agents, drives pipeline
-/sdlc:status → View current project status (read-only)
-/sdlc:env   →  Configure deployment environments
+/agent-sdlc:init  →  Configure project, create structure, define rules
+/agent-sdlc:start →  PM reads state, dispatches agents, drives pipeline
+/agent-sdlc:status → View current project status (read-only)
+/agent-sdlc:env   →  Configure deployment environments
 ```
 
 **Planning phase** (sequential): Product Manager → System Analyst → Architect → Designer
@@ -61,8 +61,8 @@ claude plugin add github.com/paulermo/claude-agent-sdlc
 
 1. Install the plugin
 2. Open your project in Claude Code
-3. Run `/sdlc:init` to configure the project
-4. Run `/sdlc:start` to launch the pipeline
+3. Run `/agent-sdlc:init` to configure the project
+4. Run `/agent-sdlc:start` to launch the pipeline
 
 ## Optional dependencies
 

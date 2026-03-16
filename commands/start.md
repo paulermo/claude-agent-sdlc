@@ -1,5 +1,5 @@
 ---
-name: "SDLC: Start"
+name: "agent-sdlc:start"
 description: "Launch the SDLC pipeline — PM orchestrator"
 ---
 
@@ -19,7 +19,7 @@ Read the following files:
 - `docs/state/content-tasks.json` → content task statuses
 
 If `project.json` doesn't exist:
-> "SDLC not initialized. Run `/sdlc:init` first."
+> "SDLC not initialized. Run `/agent-sdlc:init` first."
 Stop.
 
 Extract `worktree_dir` from `project.json` (defaults to `.worktrees` if not set).
@@ -266,7 +266,7 @@ git push -u origin {branch-name}
 ```
 
 ### When to Sync with Remote
-At the start of each `/sdlc:start` invocation (after Step 1: Read State):
+At the start of each `/agent-sdlc:start` invocation (after Step 1: Read State):
 ```bash
 # Pull latest changes on main
 git fetch origin 2>/dev/null

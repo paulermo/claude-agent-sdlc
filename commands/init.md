@@ -1,5 +1,5 @@
 ---
-name: "SDLC: Init"
+name: "agent-sdlc:init"
 description: "Initialize SDLC agent pipeline in the current project"
 ---
 
@@ -84,7 +84,7 @@ Initialize the SDLC agent pipeline for this project.
      "prefix": "{USER_PREFIX}",
      "name": "{PROJECT_NAME}",
      "phase": "not_started",
-     "_note_phase": "Phase is computed by /sdlc:status from state, but stored here as a cache for quick access. PM updates it on transitions.",
+     "_note_phase": "Phase is computed by /agent-sdlc:status from state, but stored here as a cache for quick access. PM updates it on transitions.",
      "max_parallel_teammates": 3,
      "worktree_dir": ".worktrees",
      "worktrees": {},
@@ -217,4 +217,4 @@ Initialize the SDLC agent pipeline for this project.
     > - docs/directives/ — directive system (active + archive)
     > - .worktrees/ — git worktree directory (gitignored)
     >
-    > Next: Run `/sdlc:start` to begin the SDLC pipeline.
+    > Next: Run `/agent-sdlc:start` to begin the SDLC pipeline.

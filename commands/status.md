@@ -1,5 +1,5 @@
 ---
-name: "SDLC: Status"
+name: "agent-sdlc:env"
 description: "Display current SDLC project status"
 ---
 
@@ -9,7 +9,7 @@ Display the current SDLC project status. This is read-only — no agents are lau
 
 1. **Read project state:**
    Read `docs/state/project.json`. If it doesn't exist, output:
-   > "SDLC not initialized. Run `/sdlc:init` first."
+   > "SDLC not initialized. Run `/agent-sdlc:init` first."
    and stop.
 
 2. **Read all state files:**

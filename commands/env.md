@@ -1,5 +1,5 @@
 ---
-name: "SDLC: Env"
+name: "agent-sdlc:env"
 description: "Configure project environments"
 ---
 
@@ -9,7 +9,7 @@ Configure project environments without launching the full SDLC pipeline.
 
 1. **Read current environments:**
    Read `docs/state/environments.json`. If it doesn't exist, output:
-   > "SDLC not initialized. Run `/sdlc:init` first."
+   > "SDLC not initialized. Run `/agent-sdlc:init` first."
    and stop.
 
 2. **Show current state:**
