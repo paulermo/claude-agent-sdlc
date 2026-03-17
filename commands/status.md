@@ -1,5 +1,5 @@
 ---
-name: "agent-sdlc:env"
+name: "agent-sdlc:status"
 description: "Display current SDLC project status"
 ---
 
