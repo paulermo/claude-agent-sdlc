@@ -63,8 +63,15 @@ Initialize the SDLC agent pipeline for this project.
    docs/project.md                    ← write product description here
    docs/directives/active/            ← create empty dir
    docs/directives/archive/           ← create empty dir
-   docs/rules/                        ← create dir
-   docs/rules/templates/              ← copy templates from plugin
+   docs/rules/                        ← create dir (with domain subdirs)
+   docs/rules/cross-cutting/          ← create dir
+   docs/rules/api/                    ← create dir
+   docs/rules/backend/                ← create dir
+   docs/rules/frontend/               ← create dir
+   docs/rules/infra/                  ← create dir
+   docs/rules/authoring/              ← create dir
+   docs/rules/product/                ← create dir
+   docs/rules/templates/              ← copy document templates from plugin
    docs/requirements/                 ← create empty dir
    docs/requirements/content-plan/    ← create empty dir
    docs/issues/                       ← create empty dir
@@ -72,9 +79,19 @@ Initialize the SDLC agent pipeline for this project.
    content/                           ← create empty dir
    ```
 
-6. **Copy templates from plugin:**
-   Copy all template files from the plugin's `templates/` directory to `docs/rules/templates/` in the project.
-   Copy `docs/extending-sdlc.md` from the plugin to `docs/rules/extending-sdlc.md`.
+6. **Copy templates and base rules from plugin:**
+   - Copy document templates from the plugin's `templates/` directory (BRD, epic, story, use-case, content-plan, content-task) to `docs/rules/templates/`.
+   - Copy base rules from the plugin's `templates/rules/` directory to `docs/rules/`, preserving the subdirectory structure:
+     - `templates/rules/cross-cutting/*.md` → `docs/rules/cross-cutting/`
+     - `templates/rules/api/*.md` → `docs/rules/api/`
+     - `templates/rules/backend/*.md` → `docs/rules/backend/`
+     - `templates/rules/frontend/*.md` → `docs/rules/frontend/`
+     - `templates/rules/infra/*.md` → `docs/rules/infra/`
+     - `templates/rules/authoring/*.md` → `docs/rules/authoring/`
+     - `templates/rules/product/*.md` → `docs/rules/product/`
+   - Copy `docs/extending-sdlc.md` from the plugin to `docs/rules/extending-sdlc.md`.
+
+   These base rules provide a solid starting point. The Architect agent will customize them for the specific project during the planning phase.
 
 7. **Create JSON state files:**
 
@@ -102,6 +119,8 @@ Initialize the SDLC agent pipeline for this project.
        "product": { "file": "product.md", "phase": "planning", "type": "subagent" },
        "analyst": { "file": "analyst.md", "phase": "planning", "type": "subagent" },
        "architect": { "file": "architect.md", "phase": "planning", "type": "subagent" },
+       "cloud-architect": { "file": "cloud-architect.md", "phase": "infrastructure", "type": "subagent" },
+       "devops-engineer": { "file": "devops-engineer.md", "phase": "infrastructure", "type": "subagent" },
        "designer": { "file": "designer.md", "phase": "on_demand", "type": "subagent" },
        "developer": { "file": "developer.md", "phase": "implementation", "type": "teammate" },
        "reviewer": { "file": "reviewer.md", "phase": "implementation", "type": "teammate" },
@@ -211,10 +230,19 @@ Initialize the SDLC agent pipeline for this project.
     > Created:
     > - docs/project.md — product description
     > - docs/state/ — JSON state files (project, epics, stories, content-tasks, environments)
-    > - docs/rules/ — project rules and standards
+    > - docs/rules/ — project rules organized by domain:
+    >   - cross-cutting/ — naming conventions, no magic strings
+    >   - api/ — REST standards, error format, pagination
+    >   - backend/ — architecture patterns, CQRS, modules
+    >   - frontend/ — component tiers, coding standards, design system
+    >   - infra/ — Docker conventions, secrets management
+    >   - authoring/ — CLAUDE.md and README.md standards
+    >   - product/ — spec conventions and quality criteria
     > - docs/rules/templates/ — document templates (BRD, UC, epic, story, content)
     > - docs/rules/extending-sdlc.md — extension guide
     > - docs/directives/ — directive system (active + archive)
     > - .worktrees/ — git worktree directory (gitignored)
+    >
+    > Agents: PM, Product, Analyst, Architect, Cloud Architect, DevOps Engineer, Designer, Developer, Reviewer, QA, Content Creator, Content Reviewer, Content Integrator (14 total)
     >
     > Next: Run `/agent-sdlc:start` to begin the SDLC pipeline.

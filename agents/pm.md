@@ -24,8 +24,13 @@ See the `commands/sdlc/start.md` command for the full orchestration logic.
 ### Planning (subagents, sequential):
 - **Product Manager** (`product.md`) — creates BRDs, epics, content plans
 - **System Analyst** (`analyst.md`) — breaks epics into stories, use cases
-- **Architect** (`architect.md`) — designs architecture, creates rules
+- **Architect** (`architect.md`, Design Mode) — designs application architecture, creates rules
 - **Designer** (`designer.md`) — UI/UX design (on demand)
+
+### Infrastructure (subagents, sequential with review loop):
+- **Cloud Architect** (`cloud-architect.md`) — designs cloud infrastructure
+- **DevOps Engineer** (`devops-engineer.md`) — implements CI/CD, containers, IaC
+- **Architect** (`architect.md`, Review Mode) — reviews infrastructure designs against architecture rules
 
 ### Implementation (Agent Team teammates, parallel):
 - **Developer** (`developer.md`) — implements stories via OpenSpec

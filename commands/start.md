@@ -72,21 +72,63 @@ The project has not been planned yet. Run planning agents sequentially as subage
    Wait for completion
    ```
 
-3. **Architect:**
+3. **Architect (Design Mode):**
    ```
    Spawn subagent from agents/architect.md (plugin agent)
-   Provide: BRDs, use cases, stories, project.json
+   Mode: Design Mode
+   Provide: BRDs, use cases, stories, project.json, existing rules in docs/rules/
    Wait for completion
    ```
    If Architect reports issues requiring BRD changes → re-invoke Product Manager, then System Analyst, then Architect again.
+
+   The Architect customizes the base rules in `docs/rules/` for the specific project and creates architecture documentation.
 
 4. **Designer (if needed):**
    Evaluate if the epic has UI/UX components. If yes:
    - If NOT `--no-human`: spawn Designer as foreground subagent (interactive with user)
    - If `--no-human`: spawn Designer as subagent with autonomous mode instruction
 
-5. Update epic status to `ready` in `epics.json`
-6. Commit: `{PREFIX}: Complete planning phase [by PM]`
+5. **Infrastructure Phase (if project has infrastructure needs):**
+
+   Evaluate whether the project requires cloud infrastructure, CI/CD, or containerization. If the project is purely local/simple (e.g., a CLI tool with no deployment), skip this phase.
+
+   5a. **Cloud Architect:**
+   ```
+   Spawn subagent from agents/cloud-architect.md (plugin agent)
+   Provide: docs/rules/ (all rules), docs/project.md, epic architecture notes
+   Wait for completion
+   ```
+   Cloud Architect designs the cloud infrastructure and creates/updates `docs/rules/infra/cloud-architecture.md`.
+
+   5b. **DevOps Engineer:**
+   ```
+   Spawn subagent from agents/devops-engineer.md (plugin agent)
+   Provide: docs/rules/ (all rules, including cloud-architecture.md), project config
+   Wait for completion
+   ```
+   DevOps Engineer implements CI/CD, Dockerfiles, IaC templates based on Cloud Architect's design.
+
+   5c. **Architect (Review Mode) — Infrastructure Review:**
+   ```
+   Spawn subagent from agents/architect.md (plugin agent)
+   Mode: Review Mode
+   Provide: Cloud Architect output, DevOps Engineer output, docs/rules/
+   Task: Review infrastructure designs against architecture rules
+   Wait for completion
+   ```
+
+   **Review loop:**
+   - If Architect APPROVES → proceed to implementation
+   - If Architect REJECTS → read the `review_feedback`, re-invoke the rejected agent (Cloud Architect or DevOps Engineer) with the feedback. Then re-invoke Architect in Review Mode. Repeat until approved.
+
+   Commit infrastructure work:
+   ```bash
+   git add docs/rules/infra/ Dockerfile* docker-compose* .github/ terraform/ k8s/ infra/
+   git commit -m "{PREFIX}: Complete infrastructure phase [by PM]"
+   ```
+
+6. Update epic status to `ready` in `epics.json`
+7. Commit: `{PREFIX}: Complete planning phase [by PM]`
 
 ### Phase: Stories/Content Tasks in actionable statuses → IMPLEMENTATION
 
