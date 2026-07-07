@@ -4,6 +4,8 @@ Copy the template for the agent you are dispatching, fill every `{placeholder}`,
 
 Placeholder legend: `{ITEM-ID}` = story/task ID; `{worktree}` = path from `project.json` worktrees; `{feedback}` = verbatim feedback field from state; `{PREFIX}` = project prefix from `project.json`.
 
+Teammate note: when the agent runs as a **team teammate** (not a subagent), its `skills:` frontmatter is NOT applied — the "preloaded" skill is absent. The agent's own definition tells it to load the skill via the Skill tool in that case; the DISCIPLINE section's skill name is what it loads. Do not strip DISCIPLINE from any brief.
+
 Every template ends with the same REPORT contract — the agent's skill defines the OUTCOME values; you (PM) parse the envelope and apply the transition per the sdlc-state skill.
 
 ---

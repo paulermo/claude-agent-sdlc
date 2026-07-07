@@ -19,6 +19,46 @@ Read these two files now — they are your law for this whole session:
 
 When dispatching, copy brief templates from `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/briefs.md` — never write briefs freehand.
 
+## Narration — the user must always understand what is happening (LAW)
+
+Harness notifications ("Teammate @dev-361 finished", "2 background agents launched") are noise to the user; your own text between them is their ONLY window into the pipeline. Narrate in the user's language, in terms of the WORK — never in terms of agent IDs.
+
+| Event | You output (1-3 sentences, immediately) |
+|-------|------------------------------------------|
+| Dispatch | `▶ {ITEM-ID} «{title}» → {Role}: {what they are doing, one clause}` — one line per item in the batch |
+| Verified completion | `✔ {ITEM-ID} «{title}» — {Role}: {outcome + substance in 1-2 clauses — key findings, evidence, decisions}. → {what happens next}` (`✖` for rejections/failures, with the top finding named) |
+| Planning agent done | 2-4 bullets of SUBSTANCE: what the Product Manager scoped, how the Analyst split it, WHAT the Architect decided ("JWT sessions, module-per-context, Postgres schema X") — never just "architecture created" |
+| Round starts/ends or picture changes | one-screen board: `In flight ({N}/{cap}): {ITEM-ID} {short title} — {Role}, {status}; …` |
+| Blocker/anomaly | what is blocked, why, what you are doing about it |
+
+Rules: never bare agent IDs (`dev-361` means nothing; `TST-STORY-361 «Password reset»` means everything); never paste raw reports or JSON (summarize — full text lives in files); no walls of text — if a completion narration exceeds ~4 sentences, you are pasting instead of narrating. This is LAW: a silent PM strips the user of control.
+
+Bad (the user's only signal is harness noise plus this):
+```
+reviewer-364 в idle — вердикт обработан, 364 смержена. Ждём dev-361 и dev-365.
+```
+
+Good:
+```
+✔ TST-STORY-364 «Страница логина» — Reviewer: APPROVED, 0 замечаний (12 тестов зелёные, правила соблюдены) → отправляю в QA.
+In flight (3/4): TST-STORY-361 «Регистрация» — Developer, интеграционные тесты; TST-STORY-365 «Сброс пароля» — Developer, handlers; TST-STORY-364 — QA, E2E по 5 критериям.
+```
+
+## Execution modes — pick per batch, not per project
+
+| Situation | Mode | Why |
+|-----------|------|-----|
+| 2+ independent actionable items (normal implementation/content flow) | **Agent team (teammates)** — the default | parallel sessions with own contexts; idle notifications drive your loop |
+| A single sequential step (planning chain, Deploy, epic merge) | Foreground subagent — dispatch and wait | nothing to parallelize; the next decision needs this report |
+| Advisory/read-only question while other work runs | Background subagent | cheap, holds no worktree |
+| Massive homogeneous fan-out the user explicitly asked for | Fan-out workflow (when available in the session) | deterministic orchestration of dozens of agents |
+
+*Default, not law: deviate only on concrete grounds, and record the rationale in your narration.*
+
+Target concurrency: **3-5 parallel agents** whenever enough independent items exist — `max_parallel_teammates` is the cap; independent file sets are the hard boundary (never two agents on overlapping files). Name every teammate `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-361`) — the harness prints these names, so even its notifications then carry meaning.
+
+Agent teams are an experimental Claude Code feature gated behind `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (env var or settings.json `env` block). If teammate spawning is unavailable in the session (flag off → Claude neither spawns nor proposes teammates), fall back to background subagents via the Agent tool with the SAME briefs and the SAME narration — the pipeline works in both modes; teams add direct teammate messaging and a shared panel, subagents remain fully sufficient.
+
 ## Step 1: Read state
 
 Read `docs/state/project.json`, `epics.json`, `stories.json`, `content-tasks.json`.
@@ -117,9 +157,9 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 **Merge worktree** (first `ready_for_merge` item of an epic): `git worktree add {worktree_dir}/{EPIC-ID}-merge {feature-branch}` — Deploy and feature-branch regression QA work there. Remove it when the epic is done.
 
-**Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name like `dev-TST-STORY-3`, brief = filled template from briefs.md. Set each item's working status + history, commit state (`{PREFIX}: Update state after dispatch [by PM]`).
+**Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-3`), brief = filled template from briefs.md. Set each item's working status + history, commit state (`{PREFIX}: Update state after dispatch [by PM]`), and narrate the batch (one `▶` line per item).
 
-**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition + feedback fields + history per the sdlc-state table → commit state → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
+**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition + feedback fields + history per the sdlc-state table → commit state → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
 
 ### Merge flow: story → feature branch
 
@@ -156,6 +196,7 @@ When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch De
 - Read both skills in Step 0 before any state read or dispatch.
 - Verify every report per the verification table BEFORE transitioning — evidence, artifacts, commits, state untouched by the agent.
 - Apply every transition with a history entry, then commit state.
+- Narrate every dispatch and every completion per the Narration law — substance, not agent IDs.
 - Re-check the full actionable set after every completion (a transition may unblock others).
 
 ### MUST NOT DO

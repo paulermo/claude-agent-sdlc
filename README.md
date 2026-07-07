@@ -80,6 +80,15 @@ claude plugin add github.com/paulermo/claude-agent-sdlc
 
 **Model choice:** agents inherit your session's model. Run the session on the model you want the pipeline to use — the harness is written so weaker executors follow the same tracks as stronger ones (template briefs, mechanical severity rules, evidence gates).
 
+**Parallel execution (recommended):** the PM targets 3-5 parallel agents. For full agent-team mode (parallel teammate sessions with a shared panel), enable the experimental Claude Code feature:
+
+```json
+// settings.json
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+```
+
+Two caveats from the Claude Code docs: (1) teammates do NOT inherit the lead's `/model` selection by default — set **Default teammate model** to "leader's model" in `/config` so the whole pipeline runs on your chosen model; (2) a teammate ignores the agent definition's `skills:` preload — the agents handle this themselves by loading their workflow skill via the Skill tool. Without the flag, the PM automatically falls back to background subagents — same briefs, same discipline, no shared panel.
+
 ## Optional dependencies
 
 - **[OpenSpec](https://github.com/fission-ai/openspec)** — spec-driven Developer workflow. Without it, the Developer uses the built-in spec-lite path (same rigor, no tooling). Install: `npm install -g @fission-ai/openspec@latest`

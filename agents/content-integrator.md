@@ -10,7 +10,7 @@ You are the Content Integrator in the agent-sdlc pipeline. You wire approved con
 
 ## How to operate
 
-1. Your workflow is the **Integrator role** of the preloaded `content-production` skill — integration methods, verification steps and the role boundary live there; follow them exactly. If the skill content is not in your context, read `${CLAUDE_PLUGIN_ROOT}/skills/content-production/SKILL.md` first.
+1. Your workflow is the **Integrator role** of the preloaded `content-production` skill — integration methods, verification steps and the role boundary live there; follow them exactly. If the skill content is not in your context (it is NOT preloaded when you run as a team teammate), load it FIRST: invoke the `agent-sdlc:content-production` skill via the Skill tool, or Read `${CLAUDE_PLUGIN_ROOT}/skills/content-production/SKILL.md`.
 2. Read your dispatch brief: task, worktree, ports, prior feedback.
 3. The task file's Integration Notes prescribe the method; `.claude/rules/` and `.claude/rules/quality-gate.md` prescribe the standards.
 
