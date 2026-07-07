@@ -1,7 +1,7 @@
 # Design: Adopting the paysera-marketplace harness patterns
 
 **Date:** 2026-07-07
-**Status:** approved for implementation (v1.2.0)
+**Status:** implemented (v1.2.0)
 **Goal:** Raise output quality and cross-model consistency of the agent-sdlc pipeline by adopting proven patterns from the paysera-marketplace Claude Code harness, and by fixing mechanical defects found during the audit. The pipeline must produce the same quality when driven by Opus-class models as by Fable-class models.
 
 ---

@@ -8,6 +8,9 @@
 <!-- What this story delivers -->
 
 ## Acceptance Criteria
+<!-- Observable and testable, one behavior each.
+     Good: "Submitting valid credentials redirects to /dashboard and sets a session cookie"
+     Bad:  "Login works properly" -->
 - [ ]
 
 ## Technical Notes

@@ -5,6 +5,8 @@ description: "Configure project environments"
 
 Configure project environments without launching the full SDLC pipeline.
 
+Who consumes this configuration: QA uses a configured environment's URL for E2E runs against deployed targets; the PM's infrastructure-phase criteria treat any configured environment as a signal that the infra phase must run.
+
 **Steps:**
 
 1. **Read current environments:**

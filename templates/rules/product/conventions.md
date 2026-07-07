@@ -1,49 +1,34 @@
 # Product Conventions
 
-## Feature Specification Structure
+## Requirement artifacts and IDs
 
-Every feature spec includes:
+One ID scheme across the pipeline (sequential per counter in `docs/state/project.json`):
 
-### Required Header Fields
+| Artifact | ID | Lives at |
+|----------|----|----------|
+| Business Requirements Doc | `{PREFIX}-BRD-{N}` | `docs/requirements/` |
+| Use Case | `{PREFIX}-UC-{N}` | `docs/requirements/{BRD-ID}-{slug}/` |
+| Epic | `{PREFIX}-EPIC-{N}` | `docs/issues/{EPIC-ID}-{slug}/epic.md` |
+| Story | `{PREFIX}-STORY-{N}` | `docs/issues/{EPIC-ID}-{slug}/` |
+| Content Plan | `{PREFIX}-CP-{N}` | `docs/requirements/content-plan/` |
+| Content Epic | `{PREFIX}-CEPIC-{N}` | `docs/issues/{CEPIC-ID}-{slug}/epic.md` |
+| Content Task | `{PREFIX}-CTASK-{N}` | `docs/issues/{CEPIC-ID}-{slug}/` |
 
-```yaml
----
-id: {PREFIX}-FEATURE-{N}
-status: draft | ready | in-progress | done
-priority: critical | high | medium | low
-depends-on: [list of feature IDs]
-blocks: [list of feature IDs]
----
-```
+Templates for each live in `docs/templates/` — fill every section; a section that truly doesn't apply gets "Not applicable: {why}", never silence.
 
-### Required Sections
+## Story quality criteria
 
-1. **User Story**: As a {role}, I want {capability}, so that {benefit}
-2. **Scope**:
-   - **In scope**: what this feature delivers
-   - **Out of scope**: what it explicitly does NOT deliver (prevents scope creep)
-3. **User Flow**: step-by-step interaction from the user's perspective
-4. **Acceptance Criteria**: testable conditions that must be true when done
+A story is ready for implementation when:
 
-### Recommended Sections
+- Every acceptance criterion is **observable and testable** — a pass/fail check can be written for it.
+  - Bad: `- [ ] Login works properly`
+  - Good: `- [ ] Submitting valid credentials redirects to /dashboard and sets a session cookie`
+- Every exception flow of its use case appears as at least one acceptance criterion.
+- Scope boundaries are explicit: in-scope and out-of-scope stated in the description.
+- No open questions remain — an open question means the story is not `todo`-ready.
+- It is implementable from only: the story itself, its use case, and the epic's Architecture Notes.
 
-- **Non-functional requirements**: performance, security, accessibility
-- **Edge cases**: unusual inputs, error states, boundary conditions
-- **Dependencies**: other features, external services, infrastructure
-- **Open questions**: unresolved decisions (must be resolved before implementation)
+## Scope discipline
 
-## Naming Conventions
-
-- Feature IDs: `{PREFIX}-FEATURE-{N}` (sequential within the project)
-- Epic IDs: `{PREFIX}-EPIC-{N}`
-- Story IDs: `{PREFIX}-STORY-{N}`
-- Content task IDs: `{PREFIX}-CTASK-{N}`
-
-## Spec Quality Criteria
-
-A spec is ready for implementation when:
-- All acceptance criteria are testable (can write a pass/fail test for each)
-- No open questions remain
-- Dependencies are identified and either available or scheduled
-- Scope boundaries are explicit (in-scope and out-of-scope defined)
-- Edge cases are documented
+- **In scope / out of scope** sections exist to prevent scope creep — an implementing agent may not add surfaces, endpoints, or behaviors the story doesn't name.
+- Discovered mid-implementation needs are reported back (BLOCKED or DETAILS), never silently absorbed into the story.

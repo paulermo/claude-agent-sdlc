@@ -3,246 +3,140 @@ name: "agent-sdlc:init"
 description: "Initialize SDLC agent pipeline in the current project"
 ---
 
-Initialize the SDLC agent pipeline for this project.
-
-**Steps:**
+Initialize (or migrate) the SDLC agent pipeline for this project. Idempotent: safe to re-run on an already-initialized project — it repairs the registry, migrates legacy layouts, and never overwrites existing state.
 
 ## Phase 0: Prerequisites
 
-0.1. **Check git repository:**
-   ```bash
-   git rev-parse --is-inside-work-tree 2>/dev/null
-   ```
-   If not a git repo, initialize:
-   ```bash
-   git init
-   git add -A
-   git commit -m "Initial commit"
-   ```
+0.1. **Git repository:**
+```bash
+git rev-parse --is-inside-work-tree 2>/dev/null
+```
+If not a repo: `git init && git add -A && git commit -m "Initial commit"`.
 
-0.2. **Check OpenSpec is installed (optional):**
-   ```bash
-   openspec --version 2>/dev/null
-   ```
-   If not found, inform but don't block:
-   > "OpenSpec is not installed. The Developer agent uses it for spec-driven workflow. Install via `npm install -g @fission-ai/openspec@latest` if needed."
+0.2. **OpenSpec (optional):**
+```bash
+openspec --version 2>/dev/null
+```
+- Not installed → inform (don't block): "OpenSpec not installed. The Developer will use the built-in spec-lite workflow. For OpenSpec: `npm install -g @fission-ai/openspec@latest`."
+- Installed but `openspec/` missing → `openspec init --tools claude`.
 
-   If OpenSpec IS found and not initialized in the project (`openspec/` directory does not exist):
-   ```bash
-   openspec init --tools claude
-   ```
+0.3. **Existing installation check:** if `docs/state/project.json` exists, this is a MIGRATION run — skip Phase 1 questions (keep existing config), run Phases 2-4 only for the pieces that are missing or legacy (they are all idempotent).
 
-0.3. **Check Superpowers skills are available:**
-   Verify the `superpowers:brainstorming` skill exists by checking if the Skill tool can find it.
-   If not available, inform the user:
-   > "Superpowers plugin is not installed. Install it via Claude Code settings for full SDLC capabilities (brainstorming during init)."
+## Phase 1: Project configuration (new installs only)
 
-## Phase 1: Project Configuration
+Ask via AskUserQuestion, one at a time:
+1. Project prefix (2-5 uppercase letters, e.g. KRT). Validate; re-ask if invalid.
+2. Project name.
+3. Product description (text, or a file path to read).
+4. Environments (comma-separated, e.g. `dev,staging,prod`).
 
-1. **Ask for project prefix** using AskUserQuestion:
-   > "What project prefix should be used for IDs? (e.g., KRT, PRJ, APP — 2-5 uppercase letters)"
+## Phase 2: Structure & state
 
-   Validate: 2-5 uppercase letters.
+2.1. **Directories** (create only what's missing):
 
-2. **Ask for project name** using AskUserQuestion:
-   > "What is the project name?"
+```
+.worktrees/
+docs/project.md                    ← the product description (new installs)
+docs/directives/active/  docs/directives/archive/
+docs/templates/                    ← document templates
+docs/requirements/  docs/requirements/content-plan/
+docs/issues/  docs/reviews/  docs/state/
+content/
+.claude/rules/                     ← project rules (auto-loaded by Claude Code, inherited by agents)
+```
 
-3. **Ask for product description** using AskUserQuestion:
-   > "Provide a product description (or path to a file with description):"
+2.2. **Copy document templates** from the plugin: `${CLAUDE_PLUGIN_ROOT}/templates/*.md` → `docs/templates/` (brd, epic, story, use-case, content-plan, content-task). Do not overwrite existing files.
 
-   If user provides a file path, read it. Otherwise use the text directly.
+2.3. **Seed base rules** from `${CLAUDE_PLUGIN_ROOT}/templates/rules/` → `.claude/rules/`, preserving subdirectories (`api/`, `backend/`, `frontend/`, `infra/`, `cross-cutting/`, `authoring/`, `product/`, and root files). Do not overwrite existing files. These are strong generic defaults — **the Architect customizes them for the stack during planning** (that is a pipeline step, not an init step).
 
-4. **Ask for environments** using AskUserQuestion:
-   > "Which environments to set up? (comma-separated, e.g., dev,staging,prod)"
+2.4. **Legacy migration** — if `docs/rules/` exists (pre-1.2 layout):
+- `git mv docs/rules/templates/* docs/templates/` (document templates)
+- `git mv` everything else from `docs/rules/` into `.claude/rules/`, preserving subdirectories; on name collision keep the `.claude/rules/` version and report the skipped file.
+- Remove the now-empty `docs/rules/`.
 
-## Phase 2: Structure & State
+2.5. **State files** (create ONLY if missing — never overwrite):
 
-5. **Create directory structure:**
-   ```
-   .worktrees/                        ← create empty dir (for git worktrees)
-   docs/project.md                    ← write product description here
-   docs/directives/active/            ← create empty dir
-   docs/directives/archive/           ← create empty dir
-   docs/rules/                        ← create dir (with domain subdirs)
-   docs/rules/cross-cutting/          ← create dir
-   docs/rules/api/                    ← create dir
-   docs/rules/backend/                ← create dir
-   docs/rules/frontend/               ← create dir
-   docs/rules/infra/                  ← create dir
-   docs/rules/authoring/              ← create dir
-   docs/rules/product/                ← create dir
-   docs/rules/templates/              ← copy document templates from plugin
-   docs/requirements/                 ← create empty dir
-   docs/requirements/content-plan/    ← create empty dir
-   docs/issues/                       ← create empty dir
-   docs/state/                        ← create dir
-   content/                           ← create empty dir
-   ```
+`docs/state/project.json`:
+```json
+{
+  "prefix": "{USER_PREFIX}",
+  "name": "{PROJECT_NAME}",
+  "phase": "not_started",
+  "_note_phase": "Cached pipeline phase: not_started | planning | implementation | done. Recomputed by start/status; agent registry 'stage' labels below are a different, informational grouping.",
+  "max_parallel_teammates": 3,
+  "worktree_dir": ".worktrees",
+  "worktrees": {},
+  "counters": { "brd": 0, "uc": 0, "epic": 0, "story": 0, "cp": 0, "cepic": 0, "ctask": 0 },
+  "agents": {
+    "pm":                 { "file": "pm.md",                 "stage": "all",            "type": "lead" },
+    "product":            { "file": "product.md",            "stage": "planning",       "type": "subagent" },
+    "analyst":            { "file": "analyst.md",            "stage": "planning",       "type": "subagent" },
+    "architect":          { "file": "architect.md",          "stage": "planning",       "type": "subagent" },
+    "designer":           { "file": "designer.md",           "stage": "on_demand",      "type": "subagent" },
+    "cloud-architect":    { "file": "cloud-architect.md",    "stage": "infrastructure", "type": "subagent" },
+    "devops-engineer":    { "file": "devops-engineer.md",    "stage": "infrastructure", "type": "subagent" },
+    "developer":          { "file": "developer.md",          "stage": "implementation", "type": "teammate" },
+    "reviewer":           { "file": "reviewer.md",           "stage": "implementation", "type": "teammate" },
+    "qa":                 { "file": "qa.md",                 "stage": "implementation", "type": "teammate" },
+    "deploy":             { "file": "deploy.md",             "stage": "implementation", "type": "subagent" },
+    "content-creator":    { "file": "content-creator.md",    "stage": "content",        "type": "teammate" },
+    "content-reviewer":   { "file": "content-reviewer.md",   "stage": "content",        "type": "teammate" },
+    "content-integrator": { "file": "content-integrator.md", "stage": "content",        "type": "teammate" }
+  },
+  "integrations": { "notifications": null, "issue_tracker": null, "ci_cd": null }
+}
+```
+(Migration runs: merge missing agent entries into the existing registry — notably `deploy` — and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched.)
 
-6. **Copy templates and base rules from plugin:**
-   - Copy document templates from the plugin's `templates/` directory (BRD, epic, story, use-case, content-plan, content-task) to `docs/rules/templates/`.
-   - Copy base rules from the plugin's `templates/rules/` directory to `docs/rules/`, preserving the subdirectory structure:
-     - `templates/rules/cross-cutting/*.md` → `docs/rules/cross-cutting/`
-     - `templates/rules/api/*.md` → `docs/rules/api/`
-     - `templates/rules/backend/*.md` → `docs/rules/backend/`
-     - `templates/rules/frontend/*.md` → `docs/rules/frontend/`
-     - `templates/rules/infra/*.md` → `docs/rules/infra/`
-     - `templates/rules/authoring/*.md` → `docs/rules/authoring/`
-     - `templates/rules/product/*.md` → `docs/rules/product/`
-   - Copy `docs/extending-sdlc.md` from the plugin to `docs/rules/extending-sdlc.md`.
+`docs/state/epics.json`: `{ "priority_order": [], "epics": {} }` · `stories.json`: `{}` · `content-tasks.json`: `{}` · `.secrets.json`: `{}`
+`docs/state/environments.json` from the user's list: `{ "environments": { "{env}": { "url": null, "configured": false } } }`
+(Environments are managed by `/agent-sdlc:env`; QA uses a configured env's URL for E2E against deployed targets.)
 
-   These base rules provide a solid starting point. The Architect agent will customize them for the specific project during the planning phase.
+2.6. **Verify the quality gate seed** — after step 2.3, confirm `.claude/rules/quality-gate.md` exists (it ships in the base rules as a placeholder table the Architect fills during planning). If it is missing, copy it explicitly from `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`.
 
-7. **Create JSON state files:**
+2.7. **`.gitignore`** — append if missing:
+```
+docs/state/.secrets.json
+.worktrees/
+```
 
-   `docs/state/project.json`:
-   ```json
-   {
-     "prefix": "{USER_PREFIX}",
-     "name": "{PROJECT_NAME}",
-     "phase": "not_started",
-     "_note_phase": "Phase is computed by /agent-sdlc:status from state, but stored here as a cache for quick access. PM updates it on transitions.",
-     "max_parallel_teammates": 3,
-     "worktree_dir": ".worktrees",
-     "worktrees": {},
-     "counters": {
-       "brd": 0,
-       "uc": 0,
-       "epic": 0,
-       "story": 0,
-       "cp": 0,
-       "cepic": 0,
-       "ctask": 0
-     },
-     "agents": {
-       "pm": { "file": "pm.md", "phase": "all", "type": "lead" },
-       "product": { "file": "product.md", "phase": "planning", "type": "subagent" },
-       "analyst": { "file": "analyst.md", "phase": "planning", "type": "subagent" },
-       "architect": { "file": "architect.md", "phase": "planning", "type": "subagent" },
-       "cloud-architect": { "file": "cloud-architect.md", "phase": "infrastructure", "type": "subagent" },
-       "devops-engineer": { "file": "devops-engineer.md", "phase": "infrastructure", "type": "subagent" },
-       "designer": { "file": "designer.md", "phase": "on_demand", "type": "subagent" },
-       "developer": { "file": "developer.md", "phase": "implementation", "type": "teammate" },
-       "reviewer": { "file": "reviewer.md", "phase": "implementation", "type": "teammate" },
-       "qa": { "file": "qa.md", "phase": "implementation", "type": "teammate" },
-       "content-creator": { "file": "content-creator.md", "phase": "content", "type": "teammate" },
-       "content-reviewer": { "file": "content-reviewer.md", "phase": "content", "type": "teammate" },
-       "content-integrator": { "file": "content-integrator.md", "phase": "content", "type": "teammate" }
-     },
-     "integrations": {
-       "notifications": null,
-       "issue_tracker": null,
-       "ci_cd": null
-     }
-   }
-   ```
+2.8. **CLAUDE.md managed block** — create `CLAUDE.md` if absent; then insert or replace the block between the markers (idempotent — replace existing block content on re-run):
 
-   `docs/state/epics.json`:
-   ```json
-   {
-     "priority_order": [],
-     "epics": {}
-   }
-   ```
+```markdown
+<!-- agent-sdlc:begin -->
+## SDLC pipeline (agent-sdlc)
 
-   `docs/state/stories.json`:
-   ```json
-   {}
-   ```
+This project is driven by the agent-sdlc pipeline.
 
-   `docs/state/content-tasks.json`:
-   ```json
-   {}
-   ```
+- **State** lives in `docs/state/*.json` and is written ONLY by the PM orchestrator
+  (`/agent-sdlc:start`). Dispatched agents never edit state — they end with a report
+  envelope and the PM applies transitions. Do not hand-edit state; use directives
+  (`docs/directives/active/`) to request changes.
+- **Rules** in `.claude/rules/` are law for all code work; `quality-gate.md` defines
+  the exact verification commands every agent runs.
+- **The orchestrator never writes code** — every change goes through the owning agent
+  (Developer/Content roles), then Reviewer, then QA, then Deploy.
+- **Documents**: templates in `docs/templates/`, requirements in `docs/requirements/`,
+  epics/stories in `docs/issues/`, reviews in `docs/reviews/`.
+- `/agent-sdlc:status` — where things stand; `/agent-sdlc:start` — continue the pipeline.
+<!-- agent-sdlc:end -->
+```
 
-   `docs/state/environments.json` — build from user's environment list:
-   ```json
-   {
-     "environments": {
-       "dev": { "url": null, "configured": false },
-       ...
-     }
-   }
-   ```
+2.9. **Commit:** `git add -A docs content .claude .gitignore CLAUDE.md && git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"` (migration runs: `"{PREFIX}: Migrate SDLC layout to v1.2 [by PM]"`).
 
-   `docs/state/.secrets.json`:
-   ```json
-   {}
-   ```
+## Phase 3: Push & summary
 
-8. **Add to `.gitignore`** if not already there:
-   ```
-   docs/state/.secrets.json
-   .worktrees/
-   ```
+3.1. Push if a remote exists (`git remote -v`); otherwise say: "No git remote configured. Add one with `git remote add origin <url>` and push when ready."
 
-9. **Commit structure and state:**
-   ```bash
-   git add docs/ content/ .gitignore .worktrees/
-   git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"
-   ```
+3.2. Output summary:
 
-## Phase 3: Project Rules & Standards
-
-10. **Check if project rules exist:**
-    Check `docs/rules/` for files like `architecture.md`, `coding-standards.md`, `api-conventions.md`.
-
-    If NO rules files exist (beyond templates/ and extending-sdlc.md), launch an interactive brainstorming session with the user to establish project rules:
-
-    Invoke `superpowers:brainstorming` with the following context:
-    > "We need to establish project rules and standards for {PROJECT_NAME}. The product description is in docs/project.md. We need to define:
-    >
-    > 1. **Technology stack** — what frameworks, languages, databases, and tools will be used
-    > 2. **Architecture principles** — architectural style (monolith, microservices, serverless), patterns (MVC, CQRS, etc.)
-    > 3. **Coding standards** — naming conventions, file structure, linting rules, formatting
-    > 4. **API conventions** — REST/gRPC/GraphQL, naming, versioning, error handling
-    > 5. **Testing strategy** — what to test, coverage requirements, testing frameworks
-    > 6. **Quality gates** — what must pass before a story can be reviewed, QA'd, and merged
-    > 7. **Content guidelines** — tone, style, localization requirements (if applicable)
-    >
-    > Output: create rule files in docs/rules/ (architecture.md, coding-standards.md, api-conventions.md, testing-strategy.md, quality-gates.md, and optionally content-style.md)"
-
-    After brainstorming completes, commit the rules:
-    ```bash
-    git add docs/rules/
-    git commit -m "{PREFIX}: Define project rules and standards [by PM]"
-    ```
-
-    If rules files ALREADY exist, skip this step and inform:
-    > "Project rules already defined in docs/rules/. Skipping brainstorming."
-
-## Phase 4: Finalize & Push
-
-11. **Push to remote (if configured):**
-    ```bash
-    git remote -v 2>/dev/null
-    ```
-    If a remote exists, push:
-    ```bash
-    git push
-    ```
-    If no remote, inform:
-    > "No git remote configured. Remember to add one with `git remote add origin <url>` and push when ready."
-
-12. **Output summary:**
-    > SDLC initialized for project {NAME} ({PREFIX}).
-    >
-    > Created:
-    > - docs/project.md — product description
-    > - docs/state/ — JSON state files (project, epics, stories, content-tasks, environments)
-    > - docs/rules/ — project rules organized by domain:
-    >   - cross-cutting/ — naming conventions, no magic strings
-    >   - api/ — REST standards, error format, pagination
-    >   - backend/ — architecture patterns, CQRS, modules
-    >   - frontend/ — component tiers, coding standards, design system
-    >   - infra/ — Docker conventions, secrets management
-    >   - authoring/ — CLAUDE.md and README.md standards
-    >   - product/ — spec conventions and quality criteria
-    > - docs/rules/templates/ — document templates (BRD, UC, epic, story, content)
-    > - docs/rules/extending-sdlc.md — extension guide
-    > - docs/directives/ — directive system (active + archive)
-    > - .worktrees/ — git worktree directory (gitignored)
-    >
-    > Agents: PM, Product, Analyst, Architect, Cloud Architect, DevOps Engineer, Designer, Developer, Reviewer, QA, Content Creator, Content Reviewer, Content Integrator (14 total)
-    >
-    > Next: Run `/agent-sdlc:start` to begin the SDLC pipeline.
+> SDLC initialized for {NAME} ({PREFIX}).
+>
+> - docs/project.md — product description
+> - docs/state/ — pipeline state (single writer: the PM orchestrator)
+> - .claude/rules/ — project rules, auto-loaded and inherited by every agent; quality-gate.md seeded for the Architect to fill
+> - docs/templates/ — document templates (BRD, UC, epic, story, content)
+> - CLAUDE.md — SDLC block installed
+> - Hooks active: state-file JSON validation, git discipline guard, session state summary
+>
+> 14 agents registered. Next: `/agent-sdlc:start` to begin (planning will run Product Manager → System Analyst → Architect; the Architect customizes the seeded rules for your stack).

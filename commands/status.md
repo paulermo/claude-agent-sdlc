@@ -75,5 +75,12 @@ Display the current SDLC project status. This is read-only — no agents are lau
    - `review_rejected` → "rejected by Content Reviewer, back to Content Creator"
    - `qa_rejected` (content) → "rejected by QA, back to Content Creator"
    - `qa_rejected` (integration) → "rejected by QA, back to Content Integrator"
+   - `ready_for_merge` → "ready for Deploy (merge to content-epic branch)"
+   - `merged` → "merged, awaiting regression QA"
+
+   **Epic statuses:**
+   - `planning` → "in planning" · `ready` → "ready to start" · `in_progress` → "stories in flight"
+   - `ready_for_deploy` → "all stories done, ready for Deploy (merge to main)"
+   - `deployed` → "on main, awaiting regression QA" · `frozen` → "frozen by directive" · `done` → "completed"
 
    Only show items in non-done statuses under "Active work" and "Content".

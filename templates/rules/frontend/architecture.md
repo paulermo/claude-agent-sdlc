@@ -46,4 +46,4 @@ If using a server-component framework (Next.js App Router, etc.):
 - All API calls go through a single gateway/client module
 - Never call APIs directly from components — use hooks/services
 - Handle loading, error, and empty states for every async operation
-- Follow API conventions from `docs/rules/api/standards.md`
+- Follow API conventions from `.claude/rules/api/standards.md`
