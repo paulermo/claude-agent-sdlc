@@ -124,11 +124,19 @@ This project is driven by the agent-sdlc pipeline.
 
 2.9. **Commit:** `git add -A docs content .claude .gitignore CLAUDE.md && git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"` (migration runs: `"{PREFIX}: Migrate SDLC layout to v1.2 [by PM]"`).
 
-## Phase 3: Push & summary
+## Phase 3: Rules session with the Architect (interactive)
 
-3.1. Push if a remote exists (`git remote -v`); otherwise say: "No git remote configured. Add one with `git remote add origin <url>` and push when ready."
+3.1. Ask via AskUserQuestion: "Configure the project rules now, together with the Architect (recommended), or skip — the Architect will then customize them autonomously during planning?" Options: "Configure now (Recommended)" / "Skip".
 
-3.2. Output summary:
+3.2. If **Configure now**: dispatch `agent-sdlc:Architect` as a FOREGROUND subagent (the user talks to it directly) with the "Architect — Init Rules Session" brief from `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/briefs.md`. The Architect follows its skill's Init Rules Session procedure: present the full picture (stack, rule customizations, quality-gate commands, open questions) → "What would you adjust?" gate → apply agreed changes → commit. Verify its report (RULES_CONFIGURED) and that the commit exists.
+
+3.3. If **Skip**: note it for the summary — rules stay as seeded; the Architect customizes them in Design Mode during planning.
+
+## Phase 4: Push & summary
+
+4.1. Push if a remote exists (`git remote -v`); otherwise say: "No git remote configured. Add one with `git remote add origin <url>` and push when ready."
+
+4.2. Output summary:
 
 > SDLC initialized for {NAME} ({PREFIX}).
 >
@@ -139,4 +147,5 @@ This project is driven by the agent-sdlc pipeline.
 > - CLAUDE.md — SDLC block installed
 > - Hooks active: state-file JSON validation, git discipline guard, session state summary
 >
-> 14 agents registered. Next: `/agent-sdlc:start` to begin (planning will run Product Manager → System Analyst → Architect; the Architect customizes the seeded rules for your stack).
+> 14 agents registered. Rules: {configured with you in the Architect session | seeded — the Architect will customize them during planning}.
+> Next: `/agent-sdlc:start` to begin (planning runs Product Manager → System Analyst → Architect).

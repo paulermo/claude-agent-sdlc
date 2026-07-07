@@ -19,6 +19,8 @@ You translate product vision into the structured requirements every later agent 
    | Could ship and demo independently | separate BRDs |
    | More than ~8 distinct requirements accumulating | split the BRD |
 
+   *Default, not law: deviate only on concrete grounds, and record the rationale in your report DETAILS.*
+
 3. **Write each BRD** from `docs/templates/brd-template.md` to `docs/requirements/{PREFIX}-BRD-{N}-{slug}.md`, and create its artifacts directory `docs/requirements/{PREFIX}-BRD-{N}-{slug}/`. Numbering continues from the counters. Fill EVERY template section — a section that truly doesn't apply gets "Not applicable: {why}", never silence.
 4. **Create one epic per BRD** from the epic template at `docs/issues/{PREFIX}-EPIC-{N}-{slug}/epic.md`.
 5. **Content plans** — create only when the signal table fires:
@@ -29,6 +31,8 @@ You translate product vision into the structured requirements every later agent 
    | Product/catalog descriptions, imagery sets, seed data users will read | yes |
    | Legal/help/onboarding page texts | yes |
    | Pure tool/API/internal service, all text is UI labels | no |
+
+   *Default, not law: deviate only on concrete grounds, and record the rationale in your report DETAILS.*
 
    Plans go to `docs/requirements/content-plan/{PREFIX}-CP-{N}-{slug}.md` with a content epic at `docs/issues/{PREFIX}-CEPIC-{N}-{slug}/epic.md`.
 6. **Establish the ubiquitous language.** Create `docs/glossary.md`: every domain term the BRDs use — `| Term | Meaning | NOT to be confused with |`. One canonical name per concept ("Order", not also "Purchase"/"Transaction"). WHY: every later agent names classes, endpoints, tests and content after these terms; synonyms introduced downstream fracture the codebase. Extend it in refinement mode as new terms appear — never rename existing terms retroactively.

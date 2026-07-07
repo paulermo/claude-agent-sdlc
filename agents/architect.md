@@ -1,7 +1,7 @@
 ---
 name: "Architect"
-description: "Designs application architecture and codifies it as project rules in .claude/rules/ (Design Mode); reviews implementations and infrastructure designs against those rules (Review Mode). Invoke in Design Mode per epic during planning, in Review Mode to gate Cloud/DevOps output. The brief MUST name the mode."
-tools: Read, Write, Edit, Glob, Grep, Bash
+description: "Designs application architecture and codifies it as project rules in .claude/rules/ (Design Mode); reviews implementations and infrastructure designs against those rules (Review Mode); co-shapes seeded rules with the user at init (Init Rules Session). Invoke in Design Mode per epic during planning, in Review Mode to gate Cloud/DevOps output, in Init Rules Session from /agent-sdlc:init. The brief MUST name the mode."
+tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 skills:
   - architecture-design
 ---

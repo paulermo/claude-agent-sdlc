@@ -128,6 +128,12 @@ Runners-up fixed too: environments.json written-never-read; content-reviewer gra
 9. Do-NOT-read / do-NOT-do lists for context economy.
 10. One source of truth per fact; cross-reference by exact path/name.
 
-## 5. Rollout
+## 5. Amendments (same day, after user review)
+
+- **Model floor corrected: Opus 4.8 minimum, Fable-class ceiling.** Constraints split into two tiers (docs/authoring-standards.md): **LAW** (pipeline mechanics — single-writer state, evidence gates, user-gate discipline, git discipline, anti-invention) is never overridable; **DEFAULT** (signal tables, thresholds, sizing heuristics) may be overridden by a stronger executor on concrete grounds WITH a recorded one-line rationale. Reviewer additionally gets a "rule gap" outlet: judgment beyond the rules becomes a codification proposal for the Architect, never a verdict change.
+- **Init interactivity restored** as an Architect "Init Rules Session": foreground dispatch from `/agent-sdlc:init`, full-picture presentation → "What would you adjust?" gate → agreed customizations applied to `.claude/rules/` (+ quality-gate filled when the stack is known). Replaces the removed (contradictory) brainstorming step with a coherent equivalent built on the seeded rules.
+- **Designer preview auto-open restored** as best-effort portable attempt (`open || xdg-open || true`), with the file path always given as the contract.
+
+## 6. Rollout
 
 v1.2.0, single release (agents reference skills — atomic). Existing projects: re-run `/agent-sdlc:init` → migrates `docs/rules/` → `.claude/rules/`, adds CLAUDE.md block, repairs registry (adds deploy), leaves state files untouched. State machine unchanged except: agents stop writing state (PM-only), `in_review`/`in_qa`/`integrating` now actually set by PM.

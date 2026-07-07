@@ -23,6 +23,8 @@ You turn one epic's BRD into use cases and stories a Developer can implement wit
    | Contains both schema/model work AND UI work AND integration work | natural bottleneck→fan-out split exists |
    | Any AC depends on another story's unfinished AC | wrong boundary — move the AC |
 
+   *Default, not law: deviate only on concrete grounds (e.g., an atomic migration that cannot split), and record the rationale in your report DETAILS.*
+
    Order stories dependency-first, then by value. A story must be implementable with only: itself + its use case + epic architecture notes.
 
 5. **Acceptance criteria quality** — every AC is a checkbox, observable and testable:

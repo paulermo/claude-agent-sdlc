@@ -4,6 +4,15 @@ Every agent, skill, command, rule, and template in this plugin is executed by an
 
 **The test for every instruction:** could two different models, reading this cold, do exactly the same thing? If not, rewrite it.
 
+## Two tiers: LAW vs DEFAULT
+
+The pipeline targets Opus 4.8 as the floor and Fable-class models as the ceiling. Constraints must help the weak executor without capping the strong one, so every constraint belongs to exactly one tier:
+
+- **LAW — never overridable, by any model.** These protect pipeline mechanics, not judgment: single-writer state (agents never edit `docs/state`), evidence-before-claims reports, quality gate green before done, user-gate discipline (no tool calls in a gate response, acceptance tokens), git discipline (no force-push, no `-X theirs/ours`), never inventing review findings. Overriding these breaks the pipeline regardless of how smart the executor is.
+- **DEFAULT — the decision procedure a weaker model follows verbatim.** Signal tables, numeric thresholds, sizing/splitting heuristics. A stronger executor MAY deviate when it has concrete, stateable grounds — and MUST record the deviation with a one-line rationale where the decision lives (report DETAILS, the item's history, session narration). An unrecorded deviation is an error; a recorded one is judgment.
+
+Authoring rule: signal tables and thresholds carry the suffix "*Default, not law: deviate only on concrete grounds, and record the rationale in {place}*". LAW-tier constraints never carry it — the absence of the suffix marks the tier.
+
 ## The rules
 
 1. **Numbered steps, exact commands.** Never "run the tests" — always the exact command, or a pointer to the one file that defines it (`.claude/rules/quality-gate.md`). Placeholders in `{braces}`; if a placeholder isn't self-evident, add a legend.

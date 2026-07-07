@@ -68,6 +68,8 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
    | page, screen, form, button, dashboard, navigation, "user sees/clicks", layout, style | YES |
    | pure API/CLI/library/worker/pipeline, all interaction programmatic | NO |
 
+   *Default, not law: deviate only on concrete grounds, and record the rationale in the epic's history entry.*
+
    Mode: interactive by default; autonomous with `--no-human`. Foreground (the user talks to it) unless `--no-human`.
 5. **Infrastructure phase** — run ONLY if any signal fires:
 
@@ -77,6 +79,8 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
    | `docs/state/environments.json` has a configured environment | YES |
    | Repo already has Dockerfile / terraform / CI workflows to maintain | YES |
    | Local-only tool, no deployment mentioned anywhere | NO — skip |
+
+   *Default, not law: deviate only on concrete grounds, and record the rationale in the epic's history entry.*
 
    5a. **Cloud Architect** (`agent-sdlc:Cloud Architect`); on `NEEDS_ARCHITECTURE_FIX` → Architect (Design) → retry.
    5b. **DevOps Engineer** (`agent-sdlc:DevOps Engineer`); on `NEEDS_DESIGN_FIX` → Cloud Architect → retry.

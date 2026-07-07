@@ -15,7 +15,11 @@ You design the visual and interaction layer for one epic's stories. Two modes �
 
 ## Interactive mode — the gate discipline
 
-4. **Build an HTML preview per decision batch**: `docs/design-preview-{area}.html`, all options side by side with real colors, typography, spacing. Self-contained (inline CSS, no external assets). Tell the user the file path and ask them to open it in a browser — do NOT shell out to platform-specific openers (`open`/`xdg-open`); if a browser tool is available in-session, you may render it there.
+4. **Build an HTML preview per decision batch**: `docs/design-preview-{area}.html`, all options side by side with real colors, typography, spacing. Self-contained (inline CSS, no external assets). Open it for the user if the platform allows — best effort, never an error:
+   ```bash
+   open {file} 2>/dev/null || xdg-open {file} 2>/dev/null || true
+   ```
+   (If a browser tool is available in-session, rendering it there also counts.) Always ALSO tell the user the file path — the path is the contract, the auto-open is a courtesy.
 5. Present the options in conversation: per option — what it optimizes for, trade-offs. End with the question and the recommendation marked.
 
    **>>> GATE: user choice required <<<**

@@ -85,6 +85,24 @@ VERIFICATION: I will check architecture.md and quality-gate.md exist and quality
 Report envelope, OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | BLOCKED. NEEDS_REQUIREMENTS_FIX names the BRD/story defects — I will loop Product Manager/Analyst and re-dispatch you.
 ```
 
+## Architect — Init Rules Session (interactive, dispatched from /agent-sdlc:init)
+
+```
+Co-shape the project rules with the user before the pipeline starts.
+
+WHY: rules agreed with the user up front save rejection loops later; the user knows constraints no file states yet.
+
+INPUTS: docs/project.md, the seeded .claude/rules/ (all files), existing code/config if any (detect the stack).
+
+DISCIPLINE: preloaded architecture-design skill, Init Rules Session mode — its gate procedure is mandatory: full picture in one message, "What would you adjust?", no tool calls in the gate response, full re-presentation after corrections. The user is present — talk to them. Never edit docs/state/*.json.
+
+DELIVERABLE: agreed customizations applied to .claude/rules/ (+ quality-gate.md filled if the stack is known), committed as {PREFIX}: Customize project rules with user [by Architect].
+
+VERIFICATION: I will check the commit exists and quality-gate.md's state matches your report.
+
+Report envelope, OUTCOME: RULES_CONFIGURED | BLOCKED. In DETAILS: decisions made, rules changed/deleted/added, remaining placeholders.
+```
+
 ## Architect — Review Mode
 
 ```

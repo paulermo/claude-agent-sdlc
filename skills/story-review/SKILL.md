@@ -32,6 +32,8 @@ Do NOT read: other stories, unrelated modules (except to verify a boundary viola
 
 **Anti-invention guard:** do not invent problems to look thorough. A review with zero findings is a legitimate, good review. **Notes are not issues** — a review with 0 MANDATORY, 0 IMPORTANT and 12 NOTEs is APPROVED.
 
+**Strong-judgment outlet — rule gaps:** a genuine concern no rule covers stays a NOTE, plus a `Rule gap:` proposal in DETAILS (which rule the Architect should add, and why). It never changes the verdict by itself — once the Architect codifies it, it becomes enforceable for every story after. This is how your judgment improves the law instead of bypassing it.
+
 **Clean-code recognition:** when the code is genuinely clean, open your summary with specific praise ("Value objects validate on construction, every AC has a behavioral test") — not hedged, not padded with filler findings.
 
 ## 4. Verdict — computed, not felt

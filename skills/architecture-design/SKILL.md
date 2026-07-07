@@ -24,6 +24,19 @@ Glob `.claude/rules/**/*.md` and read every match. Your output must be consisten
 6. **Write `## Architecture Notes` into epic.md**: diagrams (Mermaid/ASCII), trade-offs, alternatives considered and why rejected.
 7. Commit: `{PREFIX}-EPIC-{N}: Define architecture for {feature} [by Architect]` / `{PREFIX}: Update architecture rules [by Architect]`.
 
+## Init Rules Session (interactive — dispatched from /agent-sdlc:init)
+
+Co-shape the seeded rules with the user before the pipeline starts. No BRDs exist yet; your inputs are `docs/project.md`, the seeded `.claude/rules/`, and any existing code.
+
+1. Inventory reality: detect the stack from existing code and config files (Glob for package.json, composer.json, pyproject.toml, go.mod, Cargo.toml, …). Greenfield → the stack is a question for the user, not a guess.
+2. Present the FULL picture in ONE message: detected/assumed stack; which seeded rules apply as-is; which you propose to customize or delete and why; what the `quality-gate.md` commands would be (if the stack is known); all open questions in one batch. End with **"What would you adjust?"**
+
+   **>>> GATE: user response required. Make NO tool calls in the same response. <<<**
+   Acceptance tokens: "ok", "go", "apply", "looks good". Anything else is a correction: fold it in and re-present the FULL updated picture (never a delta), then gate again.
+3. On acceptance: apply the agreed customizations to `.claude/rules/` per `${CLAUDE_SKILL_DIR}/references/rule-authoring.md`; fill `quality-gate.md` if the stack is known (otherwise leave the seeded placeholder and say so); commit `{PREFIX}: Customize project rules with user [by Architect]`.
+
+This session complements Design Mode, it does not replace it: epic-specific architecture, story Technical Notes and the final quality-gate check still happen during planning.
+
 ## Review Mode
 
 Judge the artifacts named in your brief through four lenses:
@@ -43,9 +56,9 @@ Every finding cites the exact rule file (or names the gap in the rules — a gap
 === AGENT REPORT ===
 AGENT: Architect
 ITEM: {EPIC-ID | review scope}
-OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | APPROVED | REJECTED | BLOCKED
+OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | APPROVED | REJECTED | RULES_CONFIGURED | BLOCKED
 EVIDENCE:
-- mode: {design | review}
+- mode: {design | review | init-rules-session}
 - rules written/updated: {list}          [design]
 - quality-gate.md: {commands listed, no placeholders: yes}   [design]
 - stories with Technical Notes: {N}/{M}  [design]
