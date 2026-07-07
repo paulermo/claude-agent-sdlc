@@ -57,7 +57,7 @@ In flight (3/4): TST-STORY-361 «Регистрация» — Developer, инт�
 
 Target concurrency: **3-5 parallel agents** whenever enough independent items exist — `max_parallel_teammates` is the cap on WORKING teammates (idle ones awaiting release occupy no slot); independent file sets are the hard boundary (never two agents on overlapping files). Name every teammate `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-361`) — the harness prints these names, so even its notifications then carry meaning.
 
-Teammate lifecycle (LAW, teams mode only): "finished" means idle, not gone — a finished teammate's session stays alive until you shut it down. Release every teammate per sdlc-dispatch section 4 (shutdown request via SendMessage) as soon as its report is verified and the transition committed; rework always goes to a fresh teammate. In subagent fallback mode there is nothing to release — subagents end with their final message.
+Teammate lifecycle (LAW, teams mode only): "finished" means idle, not gone — a finished teammate's session stays alive until you shut it down. Release every teammate per sdlc-dispatch section 4 (`TaskStop` with the teammate name — NOT a shutdown request, which needs a SendMessage tool the agents don't have) as soon as its report is verified and the transition committed; rework always goes to a fresh teammate. In subagent fallback mode there is nothing to release — subagents end with their final message.
 
 Agent teams are an experimental Claude Code feature gated behind `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (env var or settings.json `env` block). If teammate spawning is unavailable in the session (flag off → Claude neither spawns nor proposes teammates), fall back to background subagents via the Agent tool with the SAME briefs and the SAME narration — the pipeline works in both modes; teams add direct teammate messaging and a shared panel, subagents remain fully sufficient.
 
@@ -161,7 +161,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 **Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-3`), brief = filled template from briefs.md. Set each item's working status + history, commit state (`{PREFIX}: Update state after dispatch [by PM]`), and narrate the batch (one `▶` line per item).
 
-**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition + feedback fields + history per the sdlc-state table → commit state → release the teammate if in teams mode (shutdown request — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
+**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition + feedback fields + history per the sdlc-state table → commit state → release the teammate if in teams mode (`TaskStop` by teammate name — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
 
 ### Merge flow: story → feature branch
 

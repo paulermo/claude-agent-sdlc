@@ -69,11 +69,13 @@ When an agent finishes, BEFORE applying any transition:
 
 Which mode are you in? If you dispatched via teammates (agent teams enabled), the release step below is mandatory. If teammate spawning is unavailable and you dispatched background/foreground subagents via the Agent tool, there is NO release step — a subagent ends with its final message and holds no session, pane, or slot. Everything else in this skill is identical in both modes.
 
-**Teams mode:** a teammate that "finished" is idle, not gone — its session stays alive (process, panel row, pane) until you shut it down. Idle teammates cost no tokens, but they accumulate without bound and invite accidental reuse. The moment the verification table passes and the transition is committed, release the teammate:
+**Teams mode:** a teammate that "finished" is idle, not gone — its session stays alive (process, panel row, pane) until you stop it. Idle teammates cost no tokens, but they accumulate without bound and invite accidental reuse. The moment the verification table passes and the transition is committed, release the teammate:
 
 ```
-SendMessage {"to": "{role}-{ITEM-ID}", "message": {"type": "shutdown_request", "reason": "report verified, work accepted"}}
+TaskStop {task_id: "{role}-{ITEM-ID}"}
 ```
+
+TaskStop takes the bare teammate name and stops the session one-sidedly — safe here because the work is committed and the report accepted, so nothing is in flight. A `No task found` error means the teammate is already gone — continue. (TaskOutput does NOT know teammates; its `No task found` proves nothing about TaskStop.)
 
 | Situation | Action |
 |-----------|--------|
@@ -91,4 +93,5 @@ Count only WORKING agents against `max_parallel_teammates`; an idle teammate awa
 - Dispatch two agents whose scopes touch the same files.
 - Apply a transition without the verification table above.
 - Leave a verified teammate idle instead of releasing it, or send rework to an old agent session (teams or fallback). WHY: idle sessions pile up across an epic, and a stale session carries its prior conclusions into rework instead of following the rejection brief.
+- Release via SendMessage `shutdown_request`. WHY: shutdown is a two-way protocol — the process ends only when the teammate answers with a structured `shutdown_response` through its own SendMessage tool, which the SDLC agents' toolsets do not include; the teammate can only echo "confirmed" as plain text and stays alive, and even when the protocol works the round-trip burns a full teammate turn. TaskStop needs no cooperation and no tokens.
 - Implement, review, or fix anything yourself — you are the orchestrator; even a "one-line fix" goes through a Developer dispatch. WHY: PM edits bypass review/QA and corrupt the pipeline's audit trail.
