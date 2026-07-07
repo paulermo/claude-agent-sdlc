@@ -8,7 +8,7 @@ Every agent, skill, command, rule, and template in this plugin is executed by an
 
 1. **Numbered steps, exact commands.** Never "run the tests" — always the exact command, or a pointer to the one file that defines it (`.claude/rules/quality-gate.md`). Placeholders in `{braces}`; if a placeholder isn't self-evident, add a legend.
 
-2. **Signal tables instead of judgment.** Every classification decision ("does this epic need a Designer?") gets a table of concrete signals → outcome. Every "if" gets criteria a model can check mechanically. "Evaluate whether…" without criteria is a coin-flip on a weaker model.
+2. **Signal tables instead of judgment.** Every classification decision ("does this epic need a Designer?") gets a table of concrete signals → outcome. Every "if" gets criteria a model can check mechanically; every size/count threshold is a hard number ("more than ~7 acceptance criteria"), never "large" or "many". "Evaluate whether…" without criteria is a coin-flip on a weaker model.
 
 3. **MUST DO / MUST NOT DO lists close every skill.** Hard stops are marked:
 
@@ -16,7 +16,7 @@ Every agent, skill, command, rule, and template in this plugin is executed by an
    >>> GATE: {condition to satisfy} <<<
    ```
 
-   A gate presentation and tool calls never share a response — a model that keeps working past a gate has skipped it.
+   A gate presentation and tool calls never share a response — a model that keeps working past a gate has skipped it. Give every conversational gate a fixed closing question and an explicit list of acceptance tokens ("go", "proceed", …); anything outside the list is feedback that loops the gate, with the FULL updated picture re-presented (never a delta).
 
 4. **Output formats quoted verbatim.** Reports, review files, state entries, commit messages: give the full template, the agent fills placeholders. An agent should never invent structure.
 

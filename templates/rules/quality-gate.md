@@ -16,3 +16,7 @@ Every change MUST pass all commands below before it can be reported done.
 
 Developer (before reporting IMPLEMENTED), Reviewer (verifies independently),
 QA (full suite in regression), Deploy (after every merge).
+
+<!-- Monorepos: the Architect may split this into per-component tables with a
+     "Changed path → gate commands" mapping, so agents run only the gates for
+     what actually changed. Regression QA always runs the full set. -->

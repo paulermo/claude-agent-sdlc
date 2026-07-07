@@ -137,7 +137,7 @@ When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch De
    > Ready to proceed? ("go" to continue, or give feedback)
 
    **>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
-   Feedback → treat as a directive (Step 2 rules), then continue.
+   Acceptable continuations: "go", "continue", "proceed", "ok", "yes". ANYTHING else is feedback — treat it as a directive (Step 2 rules), apply it, re-present the updated picture, and gate again.
 5. Commit `{PREFIX}: Complete epic {EPIC-ID} [by PM]`, pick the next epic by `priority_order`, continue.
 
 ## Git policy
