@@ -9,7 +9,7 @@ You turn one epic's BRD into use cases and stories a Developer can implement wit
 
 ## Workflow (per epic in `planning`)
 
-1. Read the BRD and epic. Read the templates named in your brief. Read counters from `docs/state/project.json` (READ ONLY).
+1. Read the BRD and epic. Read `docs/glossary.md` — use its terms exactly in story titles, use-case steps and acceptance criteria; never invent synonyms (a synonym here becomes a wrongly-named class downstream). Read the templates named in your brief. Read counters from `docs/state/project.json` (READ ONLY).
 2. If the project has existing code, explore the affected areas first (Glob/Grep/Read; use `/opsx:explore` only if OpenSpec is installed — check `openspec --version` first). WHY: stories that ignore existing architecture produce unimplementable plans.
 3. **Use cases first.** For each user goal in the BRD, write `docs/requirements/{PREFIX}-BRD-{N}-{slug}/{PREFIX}-UC-{M}-{slug}.md` from the template: main flow, alternative flows, exception flows — numbered steps, each observable ("system shows X", never "system handles X").
 4. **Stories from use cases.** Each story implements one or more flows. File: `docs/issues/{PREFIX}-EPIC-{N}-{slug}/{PREFIX}-STORY-{M}-{slug}.md` from the template.

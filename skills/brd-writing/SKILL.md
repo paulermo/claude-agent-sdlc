@@ -31,8 +31,9 @@ You translate product vision into the structured requirements every later agent 
    | Pure tool/API/internal service, all text is UI labels | no |
 
    Plans go to `docs/requirements/content-plan/{PREFIX}-CP-{N}-{slug}.md` with a content epic at `docs/issues/{PREFIX}-CEPIC-{N}-{slug}/epic.md`.
-6. **Prioritize** into a recommended `priority_order`: (1) foundations other epics depend on (auth before profiles, schema before features); (2) highest user value next; (3) content epics after the features that display the content. State the rationale per position — "obvious" is not a rationale.
-7. Commit: `{PREFIX}-BRD-{N}: {description} [by Product Manager]` (one commit per artifact group is fine).
+6. **Establish the ubiquitous language.** Create `docs/glossary.md`: every domain term the BRDs use — `| Term | Meaning | NOT to be confused with |`. One canonical name per concept ("Order", not also "Purchase"/"Transaction"). WHY: every later agent names classes, endpoints, tests and content after these terms; synonyms introduced downstream fracture the codebase. Extend it in refinement mode as new terms appear — never rename existing terms retroactively.
+7. **Prioritize** into a recommended `priority_order`: (1) foundations other epics depend on (auth before profiles, schema before features); (2) highest user value next; (3) content epics after the features that display the content. State the rationale per position — "obvious" is not a rationale.
+8. Commit: `{PREFIX}-BRD-{N}: {description} [by Product Manager]` (one commit per artifact group is fine).
 
 ## Mode: Refinement (after an epic ships)
 

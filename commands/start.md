@@ -58,7 +58,7 @@ Recompute and cache `project.json.phase` per the sdlc-state phase table. Then:
 
 Sequential dispatches — each verified (sdlc-dispatch verification table) before the next:
 
-1. **Product Manager** (`agent-sdlc:Product Manager`) — initial-planning brief. On its report: register epics from DETAILS into `epics.json` (schema from sdlc-state), set `priority_order`, update counters in `project.json`, commit state.
+1. **Product Manager** (`agent-sdlc:Product Manager`) — initial-planning brief. On its report: verify `docs/glossary.md` is among FILES (the ubiquitous language every later agent names things by — re-dispatch naming the omission if missing), register epics from DETAILS into `epics.json` (schema from sdlc-state), set `priority_order`, update counters in `project.json`, commit state.
 2. **System Analyst** (`agent-sdlc:System Analyst`) — one dispatch per epic in `planning`. On its report: register the story/task entries EXACTLY as given in DETAILS, update counters, commit state.
 3. **Architect** (`agent-sdlc:Architect`, Design Mode). On `NEEDS_REQUIREMENTS_FIX`: re-dispatch Product Manager (refinement brief quoting the defects) → System Analyst → Architect again. Loop until `DESIGNED`. Verify `.claude/rules/architecture.md` and `.claude/rules/quality-gate.md` exist and quality-gate.md has no `{placeholders}` left — if it does, re-dispatch Architect naming the defect.
 4. **Designer** (`agent-sdlc:Designer`) — dispatch ONLY if the epic has UI surfaces:

@@ -26,7 +26,7 @@ Every agent, skill, command, rule, and template in this plugin is executed by an
 
 7. **Edge cases as `Situation | Action` tables.** Enumerate the known failure modes; don't leave recovery to improvisation.
 
-8. **Anti-rationalization guards at known corner-cutting points.** Where models predictably cheat, name the temptation and forbid it: inventing review findings to look thorough, marking tests passed without running them, silently narrowing scope, "for now" workarounds.
+8. **Anti-rationalization guards at known corner-cutting points.** Where models predictably cheat, name the temptation and forbid it: inventing review findings to look thorough, marking tests passed without running them, silently narrowing scope, "for now" workarounds. When a real failure motivated a guard, cite it inline ("X incident") — provenance makes the guard survive future rewrites.
 
 9. **Do-NOT-read / do-NOT-do lists.** Context economy is explicit: tell the agent what NOT to load ("Do NOT read other stories' files") and what is out of scope. Unbounded reading burns the context that discipline depends on.
 

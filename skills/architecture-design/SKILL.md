@@ -14,7 +14,7 @@ Glob `.claude/rules/**/*.md` and read every match. Your output must be consisten
 ## Design Mode
 
 1. Read: `docs/project.md`, the epic + its BRD + use cases + stories, existing specs (`openspec spec list` if installed — check `openspec --version` first).
-2. Explore existing code (Glob/Grep/Read): current patterns, integration points, hidden complexity. Design against reality, not the ideal project.
+2. Read `docs/glossary.md` — components, entities and endpoints are named with its terms exactly (the glossary is the ubiquitous language; your Technical Notes propagate these names to every Developer). Explore existing code (Glob/Grep/Read): current patterns, integration points, hidden complexity. Design against reality, not the ideal project.
 3. **Design**: component breakdown with boundaries, data models, API surface, event flows, integration points. Behavior first — persistence is an implementation detail; never start from tables.
 4. **Codify as rules** — this is your main output. Load `${CLAUDE_SKILL_DIR}/references/rule-authoring.md` and follow it. Two files are MANDATORY every time:
    - `.claude/rules/architecture.md` — root-level, unconditional: the project's architecture overview (components, boundaries, allowed dependencies). WHY mandatory: Cloud Architect, DevOps and Reviewer all consume it.

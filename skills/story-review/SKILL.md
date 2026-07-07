@@ -20,7 +20,7 @@ Do NOT read: other stories, unrelated modules (except to verify a boundary viola
 
 1. **Story compliance** — every acceptance criterion implemented and covered by a test that verifies behavior (not just executes code); user flow matches the use case; edge/error flows handled.
 2. **Rules compliance** — file placement, naming, API conventions, module boundaries — cite the exact rule file for anything you flag.
-3. **Quality** — tests actually run and pass (run the quality-gate commands from `.claude/rules/quality-gate.md` yourself — "looks correct" ≠ "passes"); no hidden coupling; error handling present.
+3. **Quality** — tests actually run and pass (run the quality-gate commands from `.claude/rules/quality-gate.md` yourself — "looks correct" ≠ "passes"); no hidden coupling; error handling present; names use the ubiquitous language from `docs/glossary.md` (a synonym for a glossary term is an IMPORTANT finding — naming drift compounds across stories).
 
 ## 3. Classify every finding — mechanical mapping, no judgment
 

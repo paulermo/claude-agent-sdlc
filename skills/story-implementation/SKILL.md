@@ -14,6 +14,7 @@ Before writing any code:
 1. Read `.claude/rules/quality-gate.md` — the exact verification commands for this project. If it still contains `{placeholders}`, STOP and report `BLOCKED: quality-gate.md not filled by Architect`.
 2. Glob `.claude/rules/**/*.md` and read every file matching your story's domains (backend/frontend/api/infra) plus every root-level `.claude/rules/*.md`. WHY: the Reviewer rejects against these rules; reading them now is cheaper than a rejection loop.
 3. Read the story file end-to-end, including `## Technical Notes` (the Architect's decisions — you implement them, you don't re-decide them).
+4. Read `docs/glossary.md` if it exists — use its terms in class/method/variable names, error messages and test descriptions. When a term exists there, use it exactly; never invent synonyms.
 
 **The rules are the single source of truth. If you're unsure about a convention, read the relevant rule — don't invent your own.**
 

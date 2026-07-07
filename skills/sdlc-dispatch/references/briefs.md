@@ -23,9 +23,9 @@ Do NOT read: source code, docs/state/stories.json (none exist yet).
 
 DISCIPLINE: Your workflow is the preloaded brd-writing skill — follow it exactly. Never edit docs/state/*.json; report what should be registered and I will write state.
 
-DELIVERABLE: BRD files + epic files (+ content plans if the product needs content) committed per your skill's conventions, and the report below.
+DELIVERABLE: BRD files + epic files (+ content plans if the product needs content) + docs/glossary.md (the ubiquitous language) committed per your skill's conventions, and the report below.
 
-VERIFICATION: I will check every FILES entry exists, epics reference real BRDs, and priority rationale is stated.
+VERIFICATION: I will check every FILES entry exists, docs/glossary.md is present, epics reference real BRDs, and priority rationale is stated.
 
 End your final message with the report envelope (=== AGENT REPORT ===) from your skill, OUTCOME: PLANNED | BLOCKED. In DETAILS list: each BRD/epic/content-plan ID + title + priority order + new counter values.
 ```
