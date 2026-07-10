@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>agent-sdlc tracker</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>agent-sdlc <span>tracker</span></h1>
+    <select id="project-select" title="Project"></select>
+    <span class="phase-badge" id="phase">—</span>
+    <div id="live"><span class="dot"></span><span id="live-text">connecting…</span></div>
+  </header>
+  <nav id="nav">
+    <a href="#/roadmap" data-view="roadmap">Roadmap</a>
+    <a href="#/board" data-view="board">Board</a>
+    <a href="#/backlog" data-view="backlog">Backlog</a>
+    <a href="#/activity" data-view="activity">Activity</a>
+    <a href="#/archive" data-view="archive">Archive</a>
+  </nav>
+  <main id="view"><div class="empty">Loading…</div></main>
+  <footer>agent-sdlc tracker · read-only · <span id="ver"></span> · data refreshes every 2s from docs/state/</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

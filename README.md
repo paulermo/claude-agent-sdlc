@@ -39,6 +39,7 @@ The plugin is built as three knowledge layers plus an enforcement layer, so resu
 /agent-sdlc:start  →  PM orchestrator: reads state, dispatches agents, verifies, drives pipeline
 /agent-sdlc:status →  Read-only status projection
 /agent-sdlc:env    →  Configure deployment environments (consumed by QA and the infra phase)
+/agent-sdlc:tracker → Live progress dashboard in the browser (roadmap, board, backlog, activity)
 ```
 
 **Planning** (sequential): Product Manager → System Analyst → Architect → Designer (if UI signals) → infra phase (if deployment signals): Cloud Architect → DevOps → Architect review loop.
@@ -66,6 +67,10 @@ The authoritative definition (transition table, entry schemas, report envelope) 
 - Feature branch per epic (`feature/{EPIC-ID}-{slug}`), story branch per story, worktrees under `.worktrees/` for parallel work, a dedicated `{EPIC-ID}-merge` worktree for merges and feature-branch regression.
 - Merge flow: story → feature → main, full quality gate + regression QA at each step.
 - Conflict law: combination only — `-X theirs`/`-X ours` and force pushes are blocked by a hook.
+
+### Progress tracker
+
+`/agent-sdlc:tracker` opens a local, read-only web dashboard: roadmap with per-epic progress, a kanban board of the work in flight, backlog, a live activity feed from the transition log, and drill-down into any epic/story/task document (reviews and QA reports included). Data refreshes every 2 seconds straight from `docs/state/` — no restarts when the pipeline moves. One server (Python 3 stdlib, port 4680+) serves every registered project on the machine with a project switcher; re-running the command after a plugin update restarts it on the new code automatically. Requires `python3`; stops via `curl -X POST http://127.0.0.1:4680/api/shutdown`.
 
 ## Installation
 
