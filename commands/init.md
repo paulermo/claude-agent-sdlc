@@ -40,7 +40,8 @@ docs/project.md                    ← the product description (new installs)
 docs/directives/active/  docs/directives/archive/
 docs/templates/                    ← document templates
 docs/requirements/  docs/requirements/content-plan/
-docs/issues/  docs/reviews/  docs/state/
+docs/issues/  docs/reviews/  docs/reports/
+docs/state/  docs/state/archive/
 content/
 .claude/rules/                     ← project rules (auto-loaded by Claude Code, inherited by agents)
 ```
@@ -61,6 +62,7 @@ content/
 {
   "prefix": "{USER_PREFIX}",
   "name": "{PROJECT_NAME}",
+  "state_version": 2,
   "phase": "not_started",
   "_note_phase": "Cached pipeline phase: not_started | planning | implementation | done. Recomputed by start/status; agent registry 'stage' labels below are a different, informational grouping.",
   "max_parallel_teammates": 4,
@@ -89,9 +91,25 @@ content/
 ```
 (Migration runs: merge missing agent entries into the existing registry — notably `deploy` — and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched.)
 
-`docs/state/epics.json`: `{ "priority_order": [], "epics": {} }` · `stories.json`: `{}` · `content-tasks.json`: `{}` · `.secrets.json`: `{}`
+`docs/state/epics.json`: `{ "priority_order": [], "epics": {} }` · `active.json`: `{ "stories": {}, "content_tasks": {} }` · `backlog.json`: `{ "stories": {}, "content_tasks": {} }` · `log.jsonl`: empty file (`touch`) · `.secrets.json`: `{}`
 `docs/state/environments.json` from the user's list: `{ "environments": { "{env}": { "url": null, "configured": false } } }`
 (Environments are managed by `/agent-sdlc:env`; QA uses a configured env's URL for E2E against deployed targets.)
+
+2.5b. **State migration v1 → v2** — run when `docs/state/stories.json` or `docs/state/content-tasks.json` exists, or `project.json` lacks `"state_version": 2`. Order is fixed (destination first at every step):
+
+1. Create the v2 files from 2.5 that are missing (`active.json`, `backlog.json`, `log.jsonl`, `archive/`).
+2. **Histories → log.jsonl.** Emit one line per history entry from all three legacy sources, sorted by `.at`, and append:
+   ```bash
+   { jq -r 'to_entries[] | .key as $id | .value.history[]? | {item:$id} + .|@json' docs/state/stories.json 2>/dev/null;
+     jq -r 'to_entries[] | .key as $id | .value.history[]? | {item:$id} + .|@json' docs/state/content-tasks.json 2>/dev/null;
+     jq -r '.epics|to_entries[] | .key as $id | .value.history[]? | {item:$id} + .|@json' docs/state/epics.json 2>/dev/null;
+   } | jq -s 'sort_by(.at)[] | @json' -r >> docs/state/log.jsonl
+   ```
+   (If a history entry has extra fields like `note`, keep them — log lines tolerate extra keys.)
+3. **Feedback texts → files.** For every entry whose `review_feedback`/`qa_feedback`/`regression_feedback` is non-null and does not start with `docs/`: write the text to `docs/reports/{ITEM-ID}-migrated-{field}.md`, replace the field with that path.
+4. **Bucket the entries** per the sdlc-state bucket law (the epic's status decides): items of `planning`/`ready`/`frozen` epics → `backlog.json`, items of in-flight epics → `active.json`, `done` epics + their items → `archive/done-{current YYYY-MM}.json`. Strip the `history` key from every migrated entry and from epic entries; drop archived epics from `epics.json` and `priority_order`.
+5. Delete `docs/state/stories.json` and `docs/state/content-tasks.json`; set `"state_version": 2` in `project.json`.
+6. Verify: every ID from the legacy files appears in exactly one v2 file (`jq` count comparison); only then commit — `{PREFIX}: Migrate state to sharded layout (state v2) [by PM]`.
 
 2.6. **Verify the quality gate seed** — after step 2.3, confirm `.claude/rules/quality-gate.md` exists (it ships in the base rules as a placeholder table the Architect fills during planning). If it is missing, copy it explicitly from `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`.
 
@@ -109,7 +127,7 @@ docs/state/.secrets.json
 
 This project is driven by the agent-sdlc pipeline.
 
-- **State** lives in `docs/state/*.json` and is written ONLY by the PM orchestrator
+- **State** lives in `docs/state/` and is written ONLY by the PM orchestrator
   (`/agent-sdlc:start`). Dispatched agents never edit state — they end with a report
   envelope and the PM applies transitions. Do not hand-edit state; use directives
   (`docs/directives/active/`) to request changes.
@@ -123,7 +141,7 @@ This project is driven by the agent-sdlc pipeline.
 <!-- agent-sdlc:end -->
 ```
 
-2.9. **Commit:** `git add -A docs content .claude .gitignore CLAUDE.md && git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"` (migration runs: `"{PREFIX}: Migrate SDLC layout to v1.2 [by PM]"`).
+2.9. **Commit:** `git add -A docs content .claude .gitignore CLAUDE.md && git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"` (migration runs: `"{PREFIX}: Migrate SDLC layout [by PM]"`; the state v2 migration from 2.5b commits separately per its step 6).
 
 ## Phase 3: Rules session with the Architect (interactive)
 

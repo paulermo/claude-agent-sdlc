@@ -2,7 +2,7 @@
 
 Copy the template for the agent you are dispatching, fill every `{placeholder}`, send as the agent's task prompt. Write `none` rather than deleting a section.
 
-Placeholder legend: `{ITEM-ID}` = story/task ID; `{worktree}` = path from `project.json` worktrees; `{feedback}` = verbatim feedback field from state; `{PREFIX}` = project prefix from `project.json`.
+Placeholder legend: `{ITEM-ID}` = story/task ID; `{worktree}` = path from `project.json` worktrees; `{feedback-file}` = the PATH stored in the state feedback field (e.g. `docs/reviews/{STORY-ID}-2.md`) — the agent reads that file; never paste the feedback text into the brief; `{PREFIX}` = project prefix from `project.json`.
 
 Teammate note: when the agent runs as a **team teammate** (not a subagent), its `skills:` frontmatter is NOT applied — the "preloaded" skill is absent. The agent's own definition tells it to load the skill via the Skill tool in that case; the DISCIPLINE section's skill name is what it loads. Do not strip DISCIPLINE from any brief.
 
@@ -21,7 +21,7 @@ INPUTS (read in this order):
 - docs/project.md — the product description
 - docs/state/project.json — prefix and counters (READ ONLY — report new counter values, do not write)
 - docs/templates/brd-template.md, epic-template.md, content-plan-template.md
-Do NOT read: source code, docs/state/stories.json (none exist yet).
+Do NOT read: source code, docs/state/active.json or backlog.json (nothing is registered yet).
 
 DISCIPLINE: Your workflow is the preloaded brd-writing skill — follow it exactly. Never edit docs/state/*.json; report what should be registered and I will write state.
 
@@ -182,7 +182,7 @@ Implement story {STORY-ID}: {title}.
 WHY: {one sentence: what this story delivers to the user}.
 
 WORKTREE: {worktree} on branch {branch}. Work ONLY there.
-{If rework:} PRIOR FEEDBACK (fix ALL of it): {feedback}
+{If rework:} PRIOR FEEDBACK: read {feedback-file} FIRST and fix ALL of it.
 
 INPUTS (read in this order):
 1. docs/issues/{EPIC-ID}-{slug}/{STORY-ID}-{slug}.md — the story (your checklist lives here)
@@ -226,7 +226,7 @@ Test story {STORY-ID}: {title}.
 WHY: verify the story's acceptance criteria end-to-end before merge.
 
 WORKTREE: {worktree}. Ports for parallel Docker: COMPOSE_PROJECT_NAME={item-id-lower} APP_PORT={app} DB_PORT={db} (from project.json worktrees).
-{If re-test:} PRIOR QA FEEDBACK (verify every item is fixed): {feedback}
+{If re-test:} PRIOR QA FEEDBACK: read {feedback-file} — verify every item in it is fixed.
 
 INPUTS: story file (acceptance criteria), use case (flows), .claude/rules/quality-gate.md, docs/state/environments.json if E2E against a deployed env is configured.
 
@@ -262,7 +262,7 @@ WHY: QA passed; integrate before regression.
 
 WORKING DIR: {worktree_dir}/{EPIC-ID}-merge (I created it on {feature-branch}). Work ONLY there.
 
-INPUTS: .claude/rules/quality-gate.md, docs/state/stories.json (READ ONLY — for branch names).
+INPUTS: .claude/rules/quality-gate.md, docs/state/active.json (READ ONLY — for branch names).
 
 DISCIPLINE: preloaded story-merge skill — its conflict-resolution table is law (NEVER -X theirs/ours). Never edit docs/state/*.json; if state files conflict, keep the {feature-branch} side.
 
@@ -291,7 +291,7 @@ Create content for {CTASK-ID}: {title}.
 WHY: {what this content serves in the product}.
 
 WORKTREE: {worktree} on {branch}.
-{If rework:} PRIOR FEEDBACK: {feedback}
+{If rework:} PRIOR FEEDBACK: read {feedback-file} and fix ALL of it.
 
 INPUTS: docs/issues/{CEPIC-ID}-{slug}/{CTASK-ID}-{slug}.md, the content plan docs/requirements/content-plan/{CP-ID}-{slug}.md, content/ conventions from your skill.
 
@@ -318,7 +318,7 @@ Report envelope, OUTCOME: APPROVED | REJECTED (REJECTED requires specific per-fi
 Integrate content for {CTASK-ID}: {title}.
 
 WORKTREE: {worktree}.
-{If rework:} PRIOR FEEDBACK (rejection_reason was "integration"): {feedback}
+{If rework:} PRIOR FEEDBACK (rejection_reason was "integration"): read {feedback-file} and fix ALL of it.
 INPUTS: approved content files under content/, the content task file (target locations), .claude/rules/quality-gate.md.
 DISCIPLINE: preloaded content-production skill, Integrator role. Migrations/seeds/static resources only — never application logic. Never edit docs/state/*.json.
 

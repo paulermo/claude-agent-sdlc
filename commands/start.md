@@ -63,9 +63,10 @@ Agent teams are an experimental Claude Code feature gated behind `CLAUDE_CODE_EX
 
 ## Step 1: Read state
 
-Read `docs/state/project.json`, `epics.json`, `stories.json`, `content-tasks.json`.
+Read `docs/state/project.json`, `epics.json`, `active.json` — and nothing else (sdlc-state read discipline: `backlog.json` only for planning registration or starting the next epic; NEVER `archive/` or `log.jsonl`).
 
 If `project.json` doesn't exist: output "SDLC not initialized. Run `/agent-sdlc:init` first." and stop.
+If `docs/state/stories.json` exists (legacy monolithic layout): output "State uses the legacy layout. Run `/agent-sdlc:init` to migrate first." and stop.
 
 Extract `worktree_dir` (default `.worktrees`), `max_parallel_teammates`, `prefix`.
 
@@ -80,15 +81,15 @@ For each file in `docs/directives/active/` (sorted by filename):
 
 1. Read it. Apply the changes per the sdlc-state transition rules:
    - Priority changes → reorder `priority_order` in epics.json.
-   - Story rollback → reset status, append history entry with `"trigger": "{filename}"`.
-   - Epic freeze/unfreeze → set `frozen` / restore prior status (from history).
+   - Story rollback → reset status in the item's bucket file, log line with `"trigger": "{filename}"`.
+   - Epic freeze/unfreeze → set `frozen` (its items move active → backlog per the bucket law) / restore the prior status (`grep '"item":"{EPIC-ID}"' docs/state/log.jsonl | tail -1` — the one directive-time read of the log) and move items back if the restored status is an active one.
    - New requirements → note them; they go to Product Manager in the next planning/refinement dispatch (do NOT create epics/stories yourself — that is the agents' work).
 2. Move the file to `docs/directives/archive/`.
 3. Commit: `{PREFIX}: Process directive {filename} [by PM]`.
 
 ## Step 2.5: Stale worktree check
 
-For each entry in `project.json` `worktrees`: if the item's status is NOT an active one (`in_progress`, `creating`, `in_review`, `in_qa`, `integrating`) and NOT a ready-handoff one (`ready_for_review`, `ready_for_qa`, `ready_for_integration`, `ready_for_merge`), the worktree is likely from a crashed session — keep it on disk (work may exist), treat the item as needing re-dispatch.
+For each entry in `project.json` `worktrees`: look the item up in `active.json` (an item with a worktree belongs to an in-flight epic by the bucket law; if it is missing there, the law was violated — find it in backlog/archive via Bash grep and surface the anomaly instead of guessing). If the item's status is NOT an active one (`in_progress`, `creating`, `in_review`, `in_qa`, `integrating`) and NOT a ready-handoff one (`ready_for_review`, `ready_for_qa`, `ready_for_integration`, `ready_for_merge`), the worktree is likely from a crashed session — keep it on disk (work may exist), treat the item as needing re-dispatch.
 
 If an item's status is a *working* status (`in_progress`, `creating`, `in_review`, `in_qa`, `integrating`) but you did not just dispatch an agent for it, the previous session died mid-work: re-dispatch the same agent for it with its existing worktree (its brief should mention work may already exist there).
 
@@ -100,8 +101,8 @@ Recompute and cache `project.json.phase` per the sdlc-state phase table. Then:
 
 Sequential dispatches — each verified (sdlc-dispatch verification table) before the next:
 
-1. **Product Manager** (`agent-sdlc:Product Manager`) — initial-planning brief. On its report: verify `docs/glossary.md` is among FILES (the ubiquitous language every later agent names things by — re-dispatch naming the omission if missing), register epics from DETAILS into `epics.json` (schema from sdlc-state), set `priority_order`, update counters in `project.json`, commit state.
-2. **System Analyst** (`agent-sdlc:System Analyst`) — one dispatch per epic in `planning`. On its report: register the story/task entries EXACTLY as given in DETAILS, update counters, commit state.
+1. **Product Manager** (`agent-sdlc:Product Manager`) — initial-planning brief. On its report: verify `docs/glossary.md` is among FILES (the ubiquitous language every later agent names things by — re-dispatch naming the omission if missing), register epics from DETAILS into `epics.json` (schema from sdlc-state), set `priority_order`, log a registration line per epic, update counters in `project.json`, commit state.
+2. **System Analyst** (`agent-sdlc:System Analyst`) — one dispatch per epic in `planning`. On its report: register the story/task entries EXACTLY as given in DETAILS into `backlog.json` (the epic is not in flight yet — bucket law), log a registration line per item, update counters, commit state.
 3. **Architect** (`agent-sdlc:Architect`, Design Mode). On `NEEDS_REQUIREMENTS_FIX`: re-dispatch Product Manager (refinement brief quoting the defects) → System Analyst → Architect again. Loop until `DESIGNED`. Verify `.claude/rules/architecture.md` and `.claude/rules/quality-gate.md` exist and quality-gate.md has no `{placeholders}` left — if it does, re-dispatch Architect naming the defect.
 4. **Designer** (`agent-sdlc:Designer`) — dispatch ONLY if the epic has UI surfaces:
 
@@ -110,7 +111,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
    | page, screen, form, button, dashboard, navigation, "user sees/clicks", layout, style | YES |
    | pure API/CLI/library/worker/pipeline, all interaction programmatic | NO |
 
-   *Default, not law: deviate only on concrete grounds, and record the rationale in the epic's history entry.*
+   *Default, not law: deviate only on concrete grounds, and record the rationale as a decision line in log.jsonl (sdlc-state section 7).*
 
    Mode: interactive by default; autonomous with `--no-human`. Foreground (the user talks to it) unless `--no-human`.
 5. **Infrastructure phase** — run ONLY if any signal fires:
@@ -122,7 +123,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
    | Repo already has Dockerfile / terraform / CI workflows to maintain | YES |
    | Local-only tool, no deployment mentioned anywhere | NO — skip |
 
-   *Default, not law: deviate only on concrete grounds, and record the rationale in the epic's history entry.*
+   *Default, not law: deviate only on concrete grounds, and record the rationale as a decision line in log.jsonl (sdlc-state section 7).*
 
    5a. **Cloud Architect** (`agent-sdlc:Cloud Architect`); on `NEEDS_ARCHITECTURE_FIX` → Architect (Design) → retry.
    5b. **DevOps Engineer** (`agent-sdlc:DevOps Engineer`); on `NEEDS_DESIGN_FIX` → Cloud Architect → retry.
@@ -151,28 +152,29 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 **Worktree creation** (for `todo`/`*_rejected` items without one):
 
+0. If the item's epic is still `ready`: set it `in_progress`, move ALL its items backlog.json → active.json (bucket-law move discipline: destination first), log the epic transition, commit state.
 1. Respect `max_parallel_teammates`.
 2. Create the feature/content-epic branch from `main` if missing: `feature/{EPIC-ID}-{slug}` / `content/{CEPIC-ID}-{slug}`.
 3. Create the item branch from it: `story/{STORY-ID}-{slug}` / `content/{CTASK-ID}-{slug}`.
 4. `git worktree add {worktree_dir}/{ITEM-ID} {branch}`
-5. Allocate ports (app from 3100, db from 5433, next free per sdlc-state) and register the worktree entry in `project.json`; set the item's `worktree` field; commit state.
+5. Allocate ports (app from 3100, db from 5433, next free per sdlc-state) and register the worktree entry in `project.json`; set the item's `worktree` field in `active.json`; commit state.
 
 **Merge worktree** (first `ready_for_merge` item of an epic): `git worktree add {worktree_dir}/{EPIC-ID}-merge {feature-branch}` — Deploy and feature-branch regression QA work there. Remove it when the epic is done.
 
-**Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-3`), brief = filled template from briefs.md. Set each item's working status + history, commit state (`{PREFIX}: Update state after dispatch [by PM]`), and narrate the batch (one `▶` line per item).
+**Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-3`), brief = filled template from briefs.md. Set each item's working status + log line, commit state (`{PREFIX}: Update state after dispatch [by PM]`), and narrate the batch (one `▶` line per item).
 
-**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition + feedback fields + history per the sdlc-state table → commit state → release the teammate if in teams mode (`TaskStop` by teammate name — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
+**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition in `active.json` per the sdlc-state table (rejections: save DETAILS to the feedback file and store its PATH — sdlc-state section 6) → append the log line (Bash `>>`) → commit state → release the teammate if in teams mode (`TaskStop` by teammate name — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
 
 ### Merge flow: story → feature branch
 
-`ready_for_merge` → Deploy (story-merge brief, merge worktree). On `MERGED` → status `merged`, then QA regression (feature branch, merge worktree). `PASSED` → `done`; `FAILED` → `regression_failed` + create a bug-story per sdlc-state (register `{PREFIX}-STORY-{next}` with `todo`, title `fix: {what broke}`, same epic; the failed story keeps `regression_failed` with the bug-story referenced in history). On `MERGE_FAILED`/`VERIFICATION_FAILED` → keep `ready_for_merge`, create a bug-story from the report details.
+`ready_for_merge` → Deploy (story-merge brief, merge worktree). On `MERGED` → status `merged`, then QA regression (feature branch, merge worktree). `PASSED` → `done`; `FAILED` → `regression_failed` + create a bug-story per sdlc-state (register `{PREFIX}-STORY-{next}` with `todo` in `active.json` — its epic is in flight; title `fix: {what broke}`, same epic; the failed story keeps `regression_failed`, the bug-story's registration log line names it in `trigger`). On `MERGE_FAILED`/`VERIFICATION_FAILED` → keep `ready_for_merge`, create a bug-story from the report details.
 
 ### Deploy flow: epic → main
 
 When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch Deploy (epic merge — main working copy; dispatch NOTHING else until it returns). `MERGED` → epic `deployed` → QA regression on main. `PASSED` → epic `done`, then:
 
 1. Push: `git push origin main 2>/dev/null || true` (this is the deployment trigger).
-2. Remove the epic's worktrees (`git worktree remove {path}` for each item + the merge worktree); clean `project.json.worktrees`; commit state.
+2. **Archive sweep** (bucket law): move the epic's items from `active.json` and its entry from `epics.json` into `archive/done-{YYYY-MM}.json` (create the month file with `{"epics":{},"stories":{},"content_tasks":{}}` if missing; destination first, then delete from sources); remove the epic from `priority_order`. Remove the epic's worktrees (`git worktree remove {path}` for each item + the merge worktree); clean `project.json.worktrees`; commit state.
 3. **Refinement:** dispatch Product Manager (refinement brief). Apply its DETAILS (priority order, new registrations) to state.
 4. **Demo** (skip with `--no-human`): present to the user —
 
@@ -197,7 +199,7 @@ When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch De
 ### MUST DO
 - Read both skills in Step 0 before any state read or dispatch.
 - Verify every report per the verification table BEFORE transitioning — evidence, artifacts, commits, state untouched by the agent.
-- Apply every transition with a history entry, then commit state.
+- Apply every transition with a log line, then commit state.
 - Narrate every dispatch and every completion per the Narration law — substance, not agent IDs.
 - Re-check the full actionable set after every completion (a transition may unblock others).
 

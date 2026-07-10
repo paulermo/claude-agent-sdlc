@@ -49,7 +49,9 @@ The plugin is built as three knowledge layers plus an enforcement layer, so resu
 
 ### How state works (single-writer protocol)
 
-State lives in `docs/state/*.json` and is written **only by the PM orchestrator** on the main working copy. Dispatched agents never touch state — each ends with a structured report envelope (`=== AGENT REPORT ===` with OUTCOME + EVIDENCE); the PM verifies the evidence, applies the transition with a history entry, and commits. This is what makes parallel worktree execution safe: state can't fork across branches.
+State lives in `docs/state/` and is written **only by the PM orchestrator** on the main working copy. Dispatched agents never touch state — each ends with a structured report envelope (`=== AGENT REPORT ===` with OUTCOME + EVIDENCE); the PM verifies the evidence, applies the transition, appends a line to the transition log, and commits. This is what makes parallel worktree execution safe: state can't fork across branches.
+
+State is sharded so it never outgrows the PM's context (state v2): `epics.json` is a small index, `active.json` holds only the items of epics in flight, `backlog.json` holds not-yet-started work, completed epics move wholesale to `archive/done-YYYY-MM.json`, and per-item history lives in an append-only `log.jsonl` that orchestration writes (via shell append) but never reads. Review/QA feedback is stored as file paths (`docs/reviews/`, `docs/reports/`), not inline text. A normal PM session reads three small files: `project.json`, `epics.json`, `active.json`. Existing projects migrate automatically on `/agent-sdlc:init`.
 
 ### State machines
 

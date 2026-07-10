@@ -12,16 +12,17 @@ Display the current SDLC project status. This is read-only — no agents are lau
    > "SDLC not initialized. Run `/agent-sdlc:init` first."
    and stop.
 
-2. **Read all state files:**
-   - `docs/state/epics.json`
-   - `docs/state/stories.json`
-   - `docs/state/content-tasks.json`
+2. **Read state:**
+   - Read `docs/state/epics.json` and `docs/state/active.json` fully.
+   - Counts only, via Bash jq (do NOT Read these files):
+     - backlog per status: `jq -r '[.stories,.content_tasks] | map(to_entries[]?.value.status) | group_by(.) | map("\(.[0]): \(length)") | join(", ")' docs/state/backlog.json`
+     - archived total: `cat docs/state/archive/done-*.json 2>/dev/null | jq -s '[.[] | (.stories//{}|length)+(.content_tasks//{}|length)] | add // 0'`
 
-3. **Determine project phase:**
+3. **Determine project phase** (sdlc-state phase table):
    - `not_started` — no BRDs exist
    - `planning` — BRDs exist but epics are in `planning` status
    - `implementation` — at least one epic is `ready` or `in_progress`
-   - `done` — all epics are `done`
+   - `done` — `epics.json` has no epics left (all archived) and BRDs exist
 
 4. **Count directives:**
    Count files in `docs/directives/active/`.
@@ -47,6 +48,9 @@ Display the current SDLC project status. This is read-only — no agents are lau
    Content:
      {PREFIX}-CTASK-NNN {title}   [{status}]    → {next action}
      ...
+
+   Backlog: {N} items across {M} not-started epics ({per-status counts})
+   Archived: {N} done items
 
    Worktrees: {active}/{max} active
    Directives: {count} pending
@@ -83,4 +87,6 @@ Display the current SDLC project status. This is read-only — no agents are lau
    - `ready_for_deploy` → "all stories done, ready for Deploy (merge to main)"
    - `deployed` → "on main, awaiting regression QA" · `frozen` → "frozen by directive" · `done` → "completed"
 
-   Only show items in non-done statuses under "Active work" and "Content".
+   Only show items in non-done statuses under "Active work" and "Content". Epic story counts come from `active.json` for in-flight epics and from the backlog jq counts for not-started ones.
+
+7. **Verbose mode** (invoked as `/agent-sdlc:status verbose`): additionally show the last 20 transitions — `tail -20 docs/state/log.jsonl` via Bash, formatted one per line as `{at} {item} {from}→{to} ({trigger})`. This is the only routine reader of log.jsonl.
