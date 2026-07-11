@@ -83,6 +83,9 @@ nav a.on { color: var(--ink); border-bottom-color: var(--stage-wip); font-weight
 nav a:hover { color: var(--ink); }
 
 main { padding: 18px 20px 60px; max-width: 1280px; margin: 0 auto; }
+/* the board is a horizontal kanban — let it use the full viewport width,
+   while reading-oriented views stay capped for legibility */
+body[data-view="board"] main { max-width: none; }
 footer {
   padding: 10px 20px; color: var(--muted); font-size: 12px;
   border-top: 1px solid var(--grid);

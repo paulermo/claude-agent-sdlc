@@ -102,6 +102,7 @@
 
   // ---------- renders ----------
   function render() {
+    document.body.dataset.view = S.view;  // drives per-view layout (e.g. full-width board)
     document.querySelectorAll("#nav a").forEach(a =>
       a.classList.toggle("on", a.dataset.view === S.view));
     if (!S.data) { view.innerHTML = `<div class="empty">Loading…</div>`; return; }
