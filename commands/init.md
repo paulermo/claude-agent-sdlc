@@ -107,7 +107,7 @@ content/
    ```
    (If a history entry has extra fields like `note`, keep them — log lines tolerate extra keys.)
 3. **Feedback texts → files.** For every entry whose `review_feedback`/`qa_feedback`/`regression_feedback` is non-null and does not start with `docs/`: write the text to `docs/reports/{ITEM-ID}-migrated-{field}.md`, replace the field with that path.
-4. **Bucket the entries** per the sdlc-state bucket law (the epic's status decides): items of `planning`/`ready`/`frozen` epics → `backlog.json`, items of in-flight epics → `active.json`, `done` epics + their items → `archive/done-{current YYYY-MM}.json`. Strip the `history` key from every migrated entry and from epic entries; drop archived epics from `epics.json` and `priority_order`.
+4. **Bucket the entries** per the sdlc-state bucket law (the epic's status decides): items of `planning`/`ready`/`frozen` epics → `backlog.json`, items of in-flight epics → `active.json`, `done` epics + their items → `archive/done-{current YYYY-MM}.json`. **Promotion exception:** if a `ready` epic has ANY item whose status is not `todo`, the epic was in flight all along (v1 histories never set epics `in_progress`) — set its status to `in_progress` in `epics.json`, log that transition line, and bucket its items into `active.json`. Strip the `history` key from every migrated entry and from epic entries; drop archived epics from `epics.json` and `priority_order`.
 5. Delete `docs/state/stories.json` and `docs/state/content-tasks.json`; set `"state_version": 2` in `project.json`.
 6. Verify: every ID from the legacy files appears in exactly one v2 file (`jq` count comparison); only then commit — `{PREFIX}: Migrate state to sharded layout (state v2) [by PM]`.
 

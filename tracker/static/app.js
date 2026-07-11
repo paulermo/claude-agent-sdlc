@@ -147,15 +147,39 @@
     </div>`;
   }
 
+  function planningStrip() {
+    // Live planning work: epics in `planning`, or whose latest log line is an
+    // open `dispatch: {Role}` (planning chain leaves no status transitions).
+    const epics = S.data.epics.epics || {};
+    const lastLine = {};
+    S.log.forEach(l => { if (l.item) lastLine[l.item] = l; });
+    const rows = Object.entries(epics)
+      .filter(([id, e]) => e.status === "planning" ||
+        (lastLine[id] && String(lastLine[id].trigger || "").startsWith("dispatch:")))
+      .map(([id, e]) => {
+        const l = lastLine[id];
+        const who = l && String(l.trigger || "").startsWith("dispatch:")
+          ? `<span class="chip wip">${esc(l.trigger.replace("dispatch:", "").trim())} working</span>
+             <span class="trigger">since ${fmtTime(l.at)}</span>`
+          : `<span class="trigger">${esc(l && l.note ? l.note : "waiting for the planning chain")}</span>`;
+        return `<div class="row" data-item="${esc(id)}"><span class="id mono">${esc(id)}</span>
+          <span class="t">${esc(e.title)}</span>${chip(e.status, EPIC_CLS[e.status])}${who}</div>`;
+      });
+    return rows.length
+      ? `<div class="group"><div class="card"><h3 style="margin:0 0 4px;font-size:12px;color:var(--ink-2)">Planning in flight</h3>
+         <div class="rows">${rows.join("")}</div></div></div>` : "";
+  }
+
   function renderBoard() {
     const a = S.data.active;
     const all = Object.entries(a.stories || {}).concat(Object.entries(a.content_tasks || {}));
-    if (!all.length) { view.innerHTML = v1banner() + `<div class="empty">Nothing in flight — no epic is in progress.</div>`; return; }
-    view.innerHTML = v1banner() + `<div class="board">` + STAGES.map(stage => {
+    const strip = planningStrip();
+    if (!all.length && !strip) { view.innerHTML = v1banner() + `<div class="empty">Nothing in flight — no epic is in progress.</div>`; return; }
+    view.innerHTML = v1banner() + strip + (all.length ? `<div class="board">` + STAGES.map(stage => {
       const cards = all.filter(([, e]) => stage.statuses.includes(e.status));
       return `<div class="col ${stage.cls}"><h3>${stage.label}<span class="n">${cards.length}</span></h3>
         ${cards.map(([id, e]) => taskCard(id, e)).join("")}</div>`;
-    }).join("") + `</div>`;
+    }).join("") + `</div>` : `<div class="empty">No implementation items in flight.</div>`);
   }
 
   function itemRow(id, e) {
@@ -184,10 +208,11 @@
 
   function renderActivity() {
     const rows = S.log.slice().reverse().map(l => {
-      const decision = l.trigger === "decision";
+      // from == null: registration; from == to: decision / planning dispatch /
+      // planning completion (no status change) — one chip + the note.
       const move = l.from == null ? `<span class="chip neutral">registered</span>${chip(l.to)}`
-        : decision ? `<span class="note">${esc(l.note || "decision")}</span>`
-        : `${chip(l.from)}<span class="arrow">→</span>${chip(l.to)}`;
+        : l.from === l.to ? `${chip(l.to)}${l.note ? `<span class="note">${esc(l.note)}</span>` : ""}`
+        : `${chip(l.from)}<span class="arrow">→</span>${chip(l.to)}${l.note ? `<span class="note">${esc(l.note)}</span>` : ""}`;
       return `<div class="row"><span class="time">${fmtTime(l.at)}</span>
         <span class="item-link mono" data-item="${esc(l.item)}">${esc(l.item)}</span>
         ${move}<span class="trigger">${esc(l.trigger || "")}</span></div>`;

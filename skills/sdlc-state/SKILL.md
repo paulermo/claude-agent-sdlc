@@ -57,6 +57,8 @@ A story's own `done` does NOT archive it — done stories stay in active.json un
 
 **Move discipline (LAW):** write the destination file first, verify it parses, then delete from the source — both edits in the same response, in that order. A crash between the two leaves a duplicate, never a loss. If an ID ever appears in two files, the bucket-law file is correct — delete the other copy.
 
+**Consistency repair:** an item sitting in `backlog.json` with any status other than `todo` means its epic missed the `ready` → `in_progress` transition (pre-v2 histories never set it, and crashes can skip it). Apply that transition immediately — epic → `in_progress`, ALL its items → `active.json`, log line — before any dispatch. Detect it cheaply without reading the file: `jq '[.stories, .content_tasks | to_entries[]? | select(.value.status != "todo")] | length' docs/state/backlog.json` — repair only if the count is non-zero.
+
 **Read discipline:** a normal PM session reads `project.json` + `epics.json` + `active.json` and NOTHING else. Open `backlog.json` only to register planning output or to start the next epic. NEVER read `archive/` or `log.jsonl` during orchestration — they exist for /agent-sdlc:status (verbose) and crash forensics.
 
 ## 3. Agent report envelope
@@ -241,6 +243,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 
 - Registering a new item or epic logs `"from": null` (trigger = the registering agent's role).
 - A recorded deviation from a default (e.g. skipping Designer or the infra phase for an epic) is a **decision line**: `from` and `to` both equal the current status, `"trigger": "decision"`, plus `"note": "{rationale}"`. Extra keys are allowed on any line.
+- **Planning-chain visibility:** planning work changes no statuses, so it is invisible without these two lines. Before dispatching any planning-chain agent (Product Manager, System Analyst, Architect, Designer, Cloud Architect, DevOps Engineer) log a **dispatch line** — `from` == `to` == the epic's current status, `"trigger": "dispatch: {Role}"`, `"note": "{mode/scope, one clause}"`. After verifying its report, log a **completion line** — same shape, `"trigger": "{Role}"`, `"note": "{OUTCOME + one clause}"` — unless the verified report immediately changes a status (then the normal transition line IS the completion record). /status and the tracker read these as the live "who is working now" signal.
 - Bucket moves and archive sweeps are NOT logged — they are consequences of the epic transition, which is.
 - Append only: never Read or Edit log.jsonl. Its readers are /agent-sdlc:status (verbose) and crash forensics, not orchestration.
 

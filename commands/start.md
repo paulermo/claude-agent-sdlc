@@ -68,6 +68,12 @@ Read `docs/state/project.json`, `epics.json`, `active.json` — and nothing else
 If `project.json` doesn't exist: output "SDLC not initialized. Run `/agent-sdlc:init` first." and stop.
 If `docs/state/stories.json` exists (legacy monolithic layout): output "State uses the legacy layout. Run `/agent-sdlc:init` to migrate first." and stop.
 
+**Bucket consistency repair** (before anything else, cheap Bash check — not a Read):
+```bash
+jq '[.stories, .content_tasks | to_entries[]? | select(.value.status != "todo")] | length' docs/state/backlog.json
+```
+Non-zero means an epic missed its `ready` → `in_progress` transition (sdlc-state consistency repair): for each such epic, set it `in_progress`, move ALL its items backlog → active (destination first), log the epic transition, commit `{PREFIX}: Repair bucket law — {EPIC-ID} in_progress [by PM]`.
+
 Extract `worktree_dir` (default `.worktrees`), `max_parallel_teammates`, `prefix`.
 
 Sync with remote if one exists:
@@ -99,7 +105,7 @@ Recompute and cache `project.json.phase` per the sdlc-state phase table. Then:
 
 ### Phase: PLANNING (no BRDs exist, or epics in `planning`)
 
-Sequential dispatches — each verified (sdlc-dispatch verification table) before the next:
+Sequential dispatches — each verified (sdlc-dispatch verification table) before the next. Log a **dispatch line** before each dispatch and a **completion line** after verification (sdlc-state section 7) — planning changes no statuses, so without these lines it is invisible to /agent-sdlc:status and the tracker:
 
 1. **Product Manager** (`agent-sdlc:Product Manager`) — initial-planning brief. On its report: verify `docs/glossary.md` is among FILES (the ubiquitous language every later agent names things by — re-dispatch naming the omission if missing), register epics from DETAILS into `epics.json` (schema from sdlc-state), set `priority_order`, log a registration line per epic, update counters in `project.json`, commit state.
 2. **System Analyst** (`agent-sdlc:System Analyst`) — one dispatch per epic in `planning`. On its report: register the story/task entries EXACTLY as given in DETAILS into `backlog.json` (the epic is not in flight yet — bucket law), log a registration line per item, update counters, commit state.
