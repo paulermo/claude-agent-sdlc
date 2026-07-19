@@ -15,7 +15,6 @@ import json
 import hashlib
 import os
 import re
-import socket
 import sys
 import threading
 import time
@@ -29,7 +28,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 TRACKER_DIR = Path.home() / ".agent-sdlc" / "tracker"
 PROJECTS_D = TRACKER_DIR / "projects.d"
 SERVER_JSON = TRACKER_DIR / "server.json"
-BASE_PORT = 4680
+BASE_PORT = int(os.environ.get("AGENT_SDLC_TRACKER_BASE_PORT", "4680"))
 PORT_SPAN = 20
 APP = "agent-sdlc-tracker"
 
@@ -213,17 +212,36 @@ def api_log(proj, n):
 
 
 def find_entry(proj, item_id):
-    """(kind, bucket_name, entry) searching active → backlog → archive → epics."""
+    """(kind, bucket_name, entry, buckets) searching active → backlog → archive → epics."""
     layout, epics_doc, active, backlog, archived = load_buckets(proj)
-    for bucket_name, bucket in (("active", active), ("backlog", backlog), ("archive", archived)):
+    buckets = (("active", active), ("backlog", backlog), ("archive", archived))
+    for bucket_name, bucket in buckets:
         for kind in ("stories", "content_tasks"):
             if item_id in bucket.get(kind, {}):
-                return kind, bucket_name, bucket[kind][item_id]
+                return kind, bucket_name, bucket[kind][item_id], buckets
     if item_id in epics_doc.get("epics", {}):
-        return "epic", "epics", epics_doc["epics"][item_id]
+        return "epic", "epics", epics_doc["epics"][item_id], buckets
     if item_id in archived["epics"]:
-        return "epic", "archive", archived["epics"][item_id]
-    return None, None, None
+        return "epic", "archive", archived["epics"][item_id], buckets
+    return None, None, None, buckets
+
+
+def id_sort_key(item_id):
+    """Natural order: creation order via the trailing number (TMT-STORY-9 < TMT-STORY-228)."""
+    m = re.search(r"(\d+)$", item_id)
+    return (item_id[:m.start()] if m else item_id, int(m.group(1)) if m else 0)
+
+
+def epic_children(item_id, buckets):
+    """The epic's items across every bucket, in creation order — the decomposition block."""
+    children = []
+    for bucket_name, bucket in buckets:
+        for kind in ("stories", "content_tasks"):
+            for cid, ce in bucket.get(kind, {}).items():
+                if ce.get("epic") == item_id:
+                    children.append({"id": cid, "title": ce.get("title"), "status": ce.get("status"),
+                                     "kind": kind, "bucket": bucket_name})
+    return sorted(children, key=lambda c: id_sort_key(c["id"]))
 
 
 def safe_doc_path(proj, rel):
@@ -253,7 +271,7 @@ def read_doc(proj, rel):
 def api_item(proj, item_id):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", item_id or ""):
         return None
-    kind, bucket, entry = find_entry(proj, item_id)
+    kind, bucket, entry, buckets = find_entry(proj, item_id)
     if entry is None:
         return None
     doc_path = None
@@ -284,6 +302,7 @@ def api_item(proj, item_id):
         "doc_path": doc_path,
         "doc": read_doc(proj, doc_path) if doc_path else None,
         "related": related,
+        "children": epic_children(item_id, buckets) if kind == "epic" else [],
     }
 
 
@@ -379,59 +398,69 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "not found"}, 404)
 
 
-def existing_server():
-    info = read_json(SERVER_JSON)
-    if not info or not info.get("port"):
-        return None
+class TrackerServer(ThreadingHTTPServer):
+    # macOS quirk: with SO_REUSEADDR (HTTPServer's default) a second bind on the
+    # same port SUCCEEDS over a live listener and silently shadows it — an orphan
+    # with old code then keeps answering. Fail with EADDRINUSE instead.
+    allow_reuse_address = False
+
+
+def health_at(port):
+    """Live health at port: dict for our app, {"foreign": True} for others, None if silent."""
     try:
-        with urllib.request.urlopen(
-                "http://127.0.0.1:%s/api/health" % info["port"], timeout=1) as resp:
-            health = json.load(resp)
-        if health.get("app") == APP:
-            return health
+        with urllib.request.urlopen("http://127.0.0.1:%d/api/health" % port, timeout=0.6) as resp:
+            h = json.load(resp)
+        return h if h.get("app") == APP else {"foreign": True}
     except Exception:
         return None
-    return None
 
 
-def pick_port():
+def write_server_json(port, pid):
+    SERVER_JSON.write_text(json.dumps({
+        "port": port, "pid": pid, "plugin_version": VERSION,
+        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }, indent=2))
+
+
+def acquire_server():
+    """Scan the port range: adopt a same-version twin, replace a stale-version one,
+    skip foreign listeners, bind the first silent port. Never trusts server.json —
+    the live health answer is the truth."""
     for port in range(BASE_PORT, BASE_PORT + PORT_SPAN):
-        try:
-            probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            probe.bind(("127.0.0.1", port))
-            probe.close()
-            return port
-        except OSError:
+        h = health_at(port)
+        if h is None:
+            try:
+                return TrackerServer(("127.0.0.1", port), Handler), port
+            except OSError:
+                continue  # grabbed between probe and bind, or half-dead listener
+        if h.get("foreign"):
             continue
-    raise SystemExit("no free port in %d-%d" % (BASE_PORT, BASE_PORT + PORT_SPAN - 1))
+        if h.get("version") == VERSION:
+            write_server_json(port, h.get("pid", 0))  # re-point the command at the live one
+            print("already running: http://127.0.0.1:%d (v%s)" % (port, VERSION))
+            sys.exit(0)
+        # ours but stale version (plugin updated, or an orphan) — replace it
+        try:
+            req = urllib.request.Request(
+                "http://127.0.0.1:%d/api/shutdown" % port, method="POST", data=b"")
+            urllib.request.urlopen(req, timeout=2).read()
+        except Exception:
+            pass
+        for _ in range(20):
+            time.sleep(0.25)
+            try:
+                return TrackerServer(("127.0.0.1", port), Handler), port
+            except OSError:
+                continue
+    raise SystemExit("no usable port in %d-%d" % (BASE_PORT, BASE_PORT + PORT_SPAN - 1))
 
 
 def main():
     TRACKER_DIR.mkdir(parents=True, exist_ok=True)
     PROJECTS_D.mkdir(parents=True, exist_ok=True)
 
-    alive = existing_server()
-    if alive:
-        if alive.get("version") == VERSION:
-            print("already running: http://127.0.0.1:%s (v%s)" % (alive["port"], VERSION))
-            return
-        # version mismatch: the command normally shuts the old one down first,
-        # but be self-sufficient if started by hand
-        try:
-            req = urllib.request.Request(
-                "http://127.0.0.1:%s/api/shutdown" % alive["port"], method="POST", data=b"")
-            urllib.request.urlopen(req, timeout=2).read()
-            time.sleep(0.5)
-        except Exception:
-            pass
-
-    port = pick_port()
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    SERVER_JSON.write_text(json.dumps({
-        "port": port, "pid": os.getpid(), "plugin_version": VERSION,
-        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }, indent=2))
+    server, port = acquire_server()
+    write_server_json(port, os.getpid())
     print("%s v%s on http://127.0.0.1:%d (pid %d)" % (APP, VERSION, port, os.getpid()))
     try:
         server.serve_forever()

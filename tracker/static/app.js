@@ -257,6 +257,17 @@
       ["assignee", e.assignee], ["bucket", it.bucket], ["type", e.type]]
       .filter(([, v]) => v)
       .map(([k, v]) => `<dt>${k}</dt><dd class="mono">${esc(v)}</dd>`).join("");
+    // Epic decomposition: its items with statuses, clickable — same shape as the backlog rows.
+    const prog = S.data.epic_progress ? S.data.epic_progress[it.id] : null;
+    const decomposition = it.kind === "epic" && it.children && it.children.length
+      ? `<div class="group"><div class="card">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+            <h3 style="margin:0;font-size:12px;color:var(--ink-2)">Stories &amp; tasks</h3>
+            <div style="flex:1;max-width:260px">${meter(prog)}</div>
+          </div>
+          <div class="rows">${it.children.map(c => itemRow(c.id, c)).join("")}</div>
+        </div></div>`
+      : "";
     view.innerHTML = `<div class="crumbs"><a href="#/${it.kind === "epic" ? "roadmap" : "board"}">← back</a></div>
       <div class="item-head"><h2>${esc(e.title || it.id)}</h2>${chip(e.status, it.kind === "epic" ? EPIC_CLS[e.status] : undefined)}
         <span class="chip neutral">${esc(it.kind)}</span></div>
@@ -264,6 +275,7 @@
       <dl class="kv">${kv}</dl>
       ${it.related.length ? `<div class="related">${it.related.map(r =>
         `<button data-doc="${esc(r.path)}">${esc(r.label)}: ${esc(r.path.split("/").pop())}</button>`).join("")}</div>` : ""}
+      ${decomposition}
       ${it.doc != null ? `<div class="doc">${mdRender(it.doc)}</div>`
         : `<div class="empty">No document found for ${esc(it.id)}.</div>`}`;
   }
