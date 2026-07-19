@@ -15,6 +15,8 @@ import json
 import hashlib
 import os
 import re
+import signal
+import socket
 import sys
 import threading
 import time
@@ -405,6 +407,51 @@ class TrackerServer(ThreadingHTTPServer):
     allow_reuse_address = False
 
 
+class ReclaimedPortServer(TrackerServer):
+    # Used ONLY after probe_refused() confirmed nothing accepts on the port:
+    # with no live listener, SO_REUSEADDR merely steps over TIME_WAIT remnants
+    # of our own health/shutdown connections.
+    allow_reuse_address = True
+
+
+def probe_refused(port):
+    """True when nothing accepts on the port. Timeouts/mute listeners count as
+    occupied — never bind over something that still accepts connections."""
+    try:
+        conn = socket.create_connection(("127.0.0.1", port), timeout=0.4)
+        conn.close()
+        return False
+    except ConnectionRefusedError:
+        return True
+    except OSError:
+        return False
+
+
+def stop_ours(port, pid):
+    """Shut our server on port down; True once the port reaches connection-refused.
+    Graceful POST first; a deaf process gets SIGTERM via the pid its health reported."""
+    try:
+        req = urllib.request.Request(
+            "http://127.0.0.1:%d/api/shutdown" % port, method="POST", data=b"")
+        urllib.request.urlopen(req, timeout=2).read()
+    except Exception:
+        pass
+    for _ in range(16):
+        if probe_refused(port):
+            return True
+        time.sleep(0.25)
+    if pid:
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except Exception:
+            pass
+        for _ in range(16):
+            if probe_refused(port):
+                return True
+            time.sleep(0.25)
+    return False
+
+
 def health_at(port):
     """Live health at port: dict for our app, {"foreign": True} for others, None if silent."""
     try:
@@ -432,27 +479,44 @@ def acquire_server():
             try:
                 return TrackerServer(("127.0.0.1", port), Handler), port
             except OSError:
-                continue  # grabbed between probe and bind, or half-dead listener
+                # EADDRINUSE on a silent port: either something grabbed it, or a
+                # recently-shut server left TIME_WAIT. Confirmed-refused ⇒ no live
+                # listener ⇒ reclaiming over TIME_WAIT is safe; otherwise move on.
+                if probe_refused(port):
+                    try:
+                        return ReclaimedPortServer(("127.0.0.1", port), Handler), port
+                    except OSError:
+                        pass
+                continue
         if h.get("foreign"):
             continue
         if h.get("version") == VERSION:
             write_server_json(port, h.get("pid", 0))  # re-point the command at the live one
             print("already running: http://127.0.0.1:%d (v%s)" % (port, VERSION))
             sys.exit(0)
-        # ours but stale version (plugin updated, or an orphan) — replace it
-        try:
-            req = urllib.request.Request(
-                "http://127.0.0.1:%d/api/shutdown" % port, method="POST", data=b"")
-            urllib.request.urlopen(req, timeout=2).read()
-        except Exception:
-            pass
-        for _ in range(20):
-            time.sleep(0.25)
+        # ours but stale version (plugin updated, or an orphan) — replace it,
+        # and only move on once the old one is CONFIRMED dead (the v1.5.3 bug:
+        # fire-and-forget + a 5s strict-bind window lost the race to a slow
+        # shutdown and TIME_WAIT, leaving two servers on neighboring ports)
+        if stop_ours(port, h.get("pid")):
             try:
-                return TrackerServer(("127.0.0.1", port), Handler), port
+                return ReclaimedPortServer(("127.0.0.1", port), Handler), port
             except OSError:
                 continue
+        continue
     raise SystemExit("no usable port in %d-%d" % (BASE_PORT, BASE_PORT + PORT_SPAN - 1))
+
+
+def sweep_duplicates(my_port):
+    """Background: shut down any OTHER instance of ours in the port range —
+    heals states where an earlier race left two servers alive."""
+    time.sleep(1.0)
+    for port in range(BASE_PORT, BASE_PORT + PORT_SPAN):
+        if port == my_port:
+            continue
+        h = health_at(port)
+        if h and not h.get("foreign") and h.get("pid") != os.getpid():
+            stop_ours(port, h.get("pid"))
 
 
 def main():
@@ -462,6 +526,7 @@ def main():
     server, port = acquire_server()
     write_server_json(port, os.getpid())
     print("%s v%s on http://127.0.0.1:%d (pid %d)" % (APP, VERSION, port, os.getpid()))
+    threading.Thread(target=sweep_duplicates, args=(port,), daemon=True).start()
     try:
         server.serve_forever()
     finally:
