@@ -37,6 +37,8 @@ Every brief carries five mandatory sections (already built into the templates):
 4. **DELIVERABLE** — the concrete artifact + the report envelope with role-specific OUTCOME values.
 5. **VERIFICATION** — what you (PM) will check before accepting the report.
 
+**Brief cap (LAW):** a brief is the filled template and nothing else. `WHY` is the only free-text placeholder (≤ 2 sentences); every other placeholder is a path, an ID, a tier, a round number, or `none`. Hard cap: the template's length + 5 lines. Context the agent needs beyond that lives in a file the brief already points to — the story, the bug record, the feedback file, the follow-ups file, the rules. If you are typing a paragraph of context or a "quality bar" into a brief, stop: the tier sets the bar, and the file is where the context belongs. WHY: in CBS epic 1 the PM re-typed 100-200 lines of story context into every dispatch — the largest PM-side token sink of the day.
+
 ## 2. Parallelism rules
 
 - Parallel-safe: agents whose **file sets don't overlap** (different stories in different worktrees; content tasks in different worktrees). One item = one worktree = one agent at a time.
@@ -64,6 +66,24 @@ When an agent finishes, BEFORE applying any transition:
 | Agent edited `docs/state/*.json` in its worktree | instruct agent (or do it yourself in the worktree via `git checkout -- docs/state` before merge) to drop the change; apply the transition yourself from the report |
 | BLOCKERS non-empty | do NOT transition; resolve the blocker (answer, re-dispatch prerequisite agent, or surface to user) |
 | Agent went silent / died | item keeps its working status; on next `/agent-sdlc:start` the stale-worktree check re-dispatches it |
+
+**Verification is a presence check — the table above and nothing more (LAW).** You MUST NOT re-run the quality gate, re-read the diff, re-execute tests, re-judge a Reviewer's findings, or dispatch a second Reviewer/QA for a second opinion. WHY: the pipeline already verifies three times (the Developer runs the gate, the Reviewer re-runs it and reviews, QA executes); a fourth layer found nothing in CBS epic 1 and cost a large share of its budget. Exceptions: a report with non-empty BLOCKERS (you resolve the blocker), or the user asking you a specific question about the work.
+
+## 3b. Route what a verified report contains
+
+After the transition (sdlc-state section 5), mine every report ONCE for the items below. One class of finding = one record, never one per instance.
+
+| Report content | You do |
+|----------------|--------|
+| Reviewer `## Follow-ups` entries (any verdict) | append each as one `- [ ] FU-{n} · …` line to `docs/issues/{EPIC-ID}-{slug}/followups.md` (create it with its heading if missing — format in sdlc-state section 4); commit with the state |
+| Developer `follow-ups closed: FU-…` | tick those lines (`- [x]`) in followups.md |
+| Developer `OUT OF SCOPE` / QA `## Out-of-scope defects`, size small (≤ 5 lines, 1 file) | one follow-up line |
+| same, size larger | register ONE bug (sdlc-state section 4 — Bug; procedure in start.md) with the report path as `origin`; record from `docs/templates/bug-template.md` |
+| QA regression FAILED, Deploy MERGE_FAILED / VERIFICATION_FAILED | register ONE bug from the report (tier = the failed item's tier) |
+| Reviewer `Rule gap:` proposal | keep it for the Architect's next Design Mode brief — do not act on it yourself |
+| REJECTED / FAILED verdict | the returns rule (sdlc-state section 4 — Return budget and parking): re-dispatch within budget, park at budget |
+
+Never route a defect into a *story* — stories come from the System Analyst; defects are bugs or follow-ups.
 
 ## 4. Release the agent after acceptance
 
@@ -95,3 +115,6 @@ Count only WORKING agents against `max_parallel_teammates`; an idle teammate awa
 - Leave a verified teammate idle instead of releasing it, or send rework to an old agent session (teams or fallback). WHY: idle sessions pile up across an epic, and a stale session carries its prior conclusions into rework instead of following the rejection brief.
 - Release via SendMessage `shutdown_request`. WHY: shutdown is a two-way protocol — the process ends only when the teammate answers with a structured `shutdown_response` through its own SendMessage tool, which the SDLC agents' toolsets do not include; the teammate can only echo "confirmed" as plain text and stays alive, and even when the protocol works the round-trip burns a full teammate turn. TaskStop needs no cooperation and no tokens.
 - Implement, review, or fix anything yourself — you are the orchestrator; even a "one-line fix" goes through a Developer dispatch. WHY: PM edits bypass review/QA and corrupt the pipeline's audit trail.
+- Pad a brief beyond its template, or restate the story/rules inside it — point at files (brief cap law).
+- Re-verify what the pipeline already verified, review a review, or dispatch a second opinion — the verification table is a presence check.
+- Dispatch a parked item, turn a defect into a story, or register one item per instance of a finding class.

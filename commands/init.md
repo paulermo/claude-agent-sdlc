@@ -46,7 +46,7 @@ content/
 .claude/rules/                     ← project rules (auto-loaded by Claude Code, inherited by agents)
 ```
 
-2.2. **Copy document templates** from the plugin: `${CLAUDE_PLUGIN_ROOT}/templates/*.md` → `docs/templates/` (brd, epic, story, use-case, content-plan, content-task). Do not overwrite existing files.
+2.2. **Copy document templates** from the plugin: `${CLAUDE_PLUGIN_ROOT}/templates/*.md` → `docs/templates/` (brd, epic, story, use-case, bug, content-plan, content-task). Do not overwrite existing files (migration runs add the missing ones — notably `bug-template.md`).
 
 2.3. **Seed base rules** from `${CLAUDE_PLUGIN_ROOT}/templates/rules/` → `.claude/rules/`, preserving subdirectories (`api/`, `backend/`, `frontend/`, `infra/`, `cross-cutting/`, `authoring/`, `product/`, and root files). Do not overwrite existing files. These are strong generic defaults — **the Architect customizes them for the stack during planning** (that is a pipeline step, not an init step).
 
@@ -69,7 +69,7 @@ content/
   "_note_parallelism": "Target 3-5 parallel agents when independent items allow; this is the cap.",
   "worktree_dir": ".worktrees",
   "worktrees": {},
-  "counters": { "brd": 0, "uc": 0, "epic": 0, "story": 0, "cp": 0, "cepic": 0, "ctask": 0 },
+  "counters": { "brd": 0, "uc": 0, "epic": 0, "story": 0, "bug": 0, "cp": 0, "cepic": 0, "ctask": 0 },
   "agents": {
     "pm":                 { "file": "pm.md",                 "stage": "all",            "type": "lead" },
     "product":            { "file": "product.md",            "stage": "planning",       "type": "subagent" },
@@ -89,7 +89,7 @@ content/
   "integrations": { "notifications": null, "issue_tracker": null, "ci_cd": null }
 }
 ```
-(Migration runs: merge missing agent entries into the existing registry — notably `deploy` — and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched.)
+(Migration runs: merge missing agent entries into the existing registry — notably `deploy` —, add missing counters — notably `"bug": 0` —, and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched. Item entries need no migration for v1.6: absent `kind` / `tier` / `returns` read as `story` / `standard` / `0` per sdlc-state.)
 
 `docs/state/epics.json`: `{ "priority_order": [], "epics": {} }` · `active.json`: `{ "stories": {}, "content_tasks": {} }` · `backlog.json`: `{ "stories": {}, "content_tasks": {} }` · `log.jsonl`: empty file (`touch`) · `.secrets.json`: `{}`
 `docs/state/environments.json` from the user's list: `{ "environments": { "{env}": { "url": null, "configured": false } } }`
@@ -136,7 +136,7 @@ This project is driven by the agent-sdlc pipeline.
 - **The orchestrator never writes code** — every change goes through the owning agent
   (Developer/Content roles), then Reviewer, then QA, then Deploy.
 - **Documents**: templates in `docs/templates/`, requirements in `docs/requirements/`,
-  epics/stories in `docs/issues/`, reviews in `docs/reviews/`.
+  epics/stories/bugs/follow-ups in `docs/issues/`, reviews in `docs/reviews/`, QA reports in `docs/reports/`.
 - `/agent-sdlc:status` — where things stand; `/agent-sdlc:start` — continue the pipeline.
 <!-- agent-sdlc:end -->
 ```

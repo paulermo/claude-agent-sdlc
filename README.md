@@ -27,8 +27,8 @@ The plugin is built as three knowledge layers plus an enforcement layer, so resu
 | **DevOps Engineer** | CI/CD, Dockerfiles, K8s, Terraform/IaC | Infrastructure |
 | **Designer** | UI/UX options with HTML previews and user approval gates | Planning (on demand) |
 | **Developer** | Implements stories (OpenSpec or built-in spec-lite workflow) | Implementation |
-| **Reviewer** | Code review with mechanical severity discipline (read-only) | Implementation |
-| **QA** | E2E testing + full-suite regression after merges | Implementation |
+| **Reviewer** | Code review with tier-scaled lenses and a round-bounded verdict law (read-only) | Implementation |
+| **QA** | E2E testing by tier + full-suite regression after merges | Implementation |
 | **Deploy** | Merges with combination-only conflict resolution | Implementation |
 | **Content Creator / Reviewer / Integrator** | Content production pipeline | Content |
 
@@ -57,10 +57,15 @@ State is sharded so it never outgrows the PM's context (state v2): `epics.json` 
 ### State machines
 
 - **Epics:** `planning → ready → in_progress → ready_for_deploy → deployed → done` (+ `frozen` via directive)
-- **Stories:** `todo → in_progress → ready_for_review → in_review → ready_for_qa → in_qa → ready_for_merge → merged → done`, with `review_rejected` / `qa_rejected` looping back to the Developer and `regression_failed` spawning a bug-story
+- **Stories:** `todo → in_progress → ready_for_review → in_review → ready_for_qa → in_qa → ready_for_merge → merged → done`, with `review_rejected` / `qa_rejected` looping back to the Developer and `regression_failed` spawning a bug
+- **Bugs:** the same statuses with fewer stages by tier — `light`: Developer → merge → regression; `standard`: + one delta review; `critical`: + QA. A bug has no story file or use case: its record (`docs/issues/{EPIC}/bugs/`) is the spec and a regression test is the acceptance criterion
 - **Content tasks:** `todo → creating → ready_for_review → in_review → ready_for_integration → integrating → ready_for_qa → in_qa → ready_for_merge → merged → done`, with rejections routed by `rejection_reason` (content vs integration)
 
 The authoritative definition (transition table, entry schemas, report envelope) is `skills/sdlc-state/SKILL.md`.
+
+### Round economy (tiers, budgets, follow-ups)
+
+Every story carries a **tier** (`light` / `standard` / `critical`, set by the System Analyst from a signal table) that scales the whole downstream: review lenses, whether QA runs at all (light stories skip it), and the **return budget** — how many rework rounds an item may consume (1 / 2 / 3; bugs 1). At the budget the item is parked and the user decides (one more round, accept, park) instead of the pipeline looping. Non-blocking review findings become **follow-ups** (one file per epic, one line per finding class) that Developers close in passing and a single hygiene bug sweeps at epic end; defects reported by QA or Developers become follow-ups or bugs — never stories. Briefs are capped at their template, and the PM's verification is a presence check, not a fourth review. Design record: `docs/plans/2026-08-25-round-economy-design.md`.
 
 ### Git strategy
 
@@ -115,8 +120,9 @@ your-project/
 │   ├── templates/           ← BRD, UC, epic, story, content templates
 │   ├── directives/          ← drop files in active/ to steer the PM
 │   ├── requirements/        ← BRDs, use cases, content plans
-│   ├── issues/              ← epics, stories, content tasks
+│   ├── issues/              ← epics, stories, content tasks; per epic: bugs/ and followups.md
 │   ├── reviews/             ← saved review documents
+│   ├── reports/             ← QA and regression reports
 │   └── state/               ← pipeline state (PM-only writes)
 └── content/                 ← produced content files
 ```

@@ -2,6 +2,7 @@
 
 **Epic:** {PREFIX}-EPIC-{N}
 **Use Case:** {PREFIX}-UC-{N}
+**Tier:** standard   <!-- light | standard | critical — System Analyst sets it from the tier table; it decides review depth, QA, and the return budget -->
 **Status:** todo
 
 ## Description

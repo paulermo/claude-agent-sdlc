@@ -42,7 +42,8 @@ Display the current SDLC project status. This is read-only — no agents are lau
      ...
 
    Active work:
-     {PREFIX}-STORY-NNN {title}   [{status}]    → {next action}
+     {PREFIX}-STORY-NNN {title}   [{status}]  [{tier} · {returns}/{budget}]    → {next action}
+     {PREFIX}-BUG-NNN   {title}   [{status}]  [bug · {tier} · {returns}/1]     → {next action}
      ...
 
    Content:
@@ -56,6 +57,8 @@ Display the current SDLC project status. This is read-only — no agents are lau
    Directives: {count} pending
    ```
 
+   `{tier}` / `{returns}` come from the entry (absent = `standard` / `0`); `{budget}` is the tier's return budget (sdlc-state section 4: light 1, standard 2, critical 3; bugs always 1). An item in `review_rejected` / `qa_rejected` with `returns >= budget` is **parked** — its next action is always "PARKED — budget exhausted; answer the budget gate in /agent-sdlc:start or drop an unpark directive", whatever the table below says.
+
    Where `{next action}` maps status to human-readable action:
 
    **Story statuses:**
@@ -63,14 +66,20 @@ Display the current SDLC project status. This is read-only — no agents are lau
    - `in_progress` → "Developer working"
    - `ready_for_review` → "ready for Reviewer"
    - `in_review` → "Reviewer working"
-   - `ready_for_qa` → "ready for QA"
+   - `ready_for_qa` → "ready for QA" (light-tier story: "light tier — PM advances to merge without QA")
    - `in_qa` → "QA testing"
    - `review_rejected` → "rejected by Reviewer, back to Developer"
    - `qa_rejected` → "rejected by QA, back to Developer"
    - `ready_for_merge` → "ready for Deploy (merge to feature branch)"
    - `merged` → "merged to feature branch, awaiting regression QA"
-   - `regression_failed` → "regression failed, bug-story needed"
+   - `regression_failed` → "regression failed — a bug was registered for it (see Active work)"
    - `done` → "completed"
+
+   **Bug statuses** (`kind: bug` — same statuses, fewer stages by tier):
+   - `todo` → "waiting for Developer (bug)" · `in_progress` → "Developer fixing"
+   - `ready_for_review` → "ready for Reviewer (delta review)" · `in_review` → "Reviewer working"
+   - `ready_for_qa` / `in_qa` → only critical-tier bugs reach QA; otherwise this status does not occur
+   - `ready_for_merge` → "ready for Deploy (light bugs arrive here straight from the Developer)"
 
    **Content task statuses (additional):**
    - `creating` → "Content Creator working"
@@ -84,7 +93,7 @@ Display the current SDLC project status. This is read-only — no agents are lau
 
    **Epic statuses:**
    - `planning` → "in planning" · `ready` → "ready to start" · `in_progress` → "stories in flight"
-   - `ready_for_deploy` → "all stories done, ready for Deploy (merge to main)"
+   - `ready_for_deploy` → "all items done, follow-ups closed — ready for Deploy (merge to main)"
    - `deployed` → "on main, awaiting regression QA" · `frozen` → "frozen by directive" · `done` → "completed"
 
    Only show items in non-done statuses under "Active work" and "Content". Epic story counts come from `active.json` for in-flight epics and from the backlog jq counts for not-started ones.

@@ -25,6 +25,18 @@ You turn one epic's BRD into use cases and stories a Developer can implement wit
 
    *Default, not law: deviate only on concrete grounds (e.g., an atomic migration that cannot split), and record the rationale in your report DETAILS.*
 
+   **Tier — set the `**Tier:**` line of every story** (what the tier decides — review depth, QA, return budget — is the table in sdlc-state section 4):
+
+   | Signal in the story's ACs / flows (any fires) | Tier |
+   |-----------------------------------------------|------|
+   | money movement, balances, pricing; auth/authz/sessions; PII or secrets; data migrations or deletes; irreversible external effects (emails, webhooks, payments) | `critical` |
+   | only docs/README/comments; config, tooling, CI, scripts; tests only; formatting; dependency bump without API change; scaffolding with no behavior | `light` |
+   | everything else | `standard` |
+
+   A story mixing light and standard work is `standard`; anything mixed with critical is `critical`. Prefer splitting so that a README/config part ships as its own `light` story instead of inheriting a `critical` tier. WHY: one quality bar for everything gave a README seven review rounds in CBS epic 1.
+
+   *Default, not law: deviate only on concrete grounds, and record the rationale in your report DETAILS.*
+
    Order stories dependency-first, then by value. A story must be implementable with only: itself + its use case + epic architecture notes.
 
 5. **Acceptance criteria quality** — every AC is a checkbox, observable and testable:
@@ -49,12 +61,13 @@ EVIDENCE:
 - use cases: {list of IDs}
 - stories: {list of IDs + titles, in dependency order}
 - sizing: {each story: which signals checked, none fired}
+- tiers: {each story: tier + the signal that fired, or "none → standard"}
 FILES:
 - {every file created}
 BLOCKERS: {none | list}
 DETAILS:
 - registration data per story/task — EXACT entry JSON per the sdlc-state schema:
-  {"{PREFIX}-STORY-{M}": {"epic": "...", "title": "...", "status": "todo", "branch": "story/{PREFIX}-STORY-{M}-{slug}", "worktree": null, "assignee": null, "review_feedback": null, "qa_feedback": null, "regression_feedback": null, "history": []}}
+  {"{PREFIX}-STORY-{M}": {"epic": "...", "title": "...", "kind": "story", "tier": "light|standard|critical", "returns": 0, "status": "todo", "branch": "story/{PREFIX}-STORY-{M}-{slug}", "worktree": null, "assignee": null, "review_feedback": null, "qa_feedback": null, "regression_feedback": null}}
 - counters consumed: uc={n}, story={n}, ctask={n}
 - NEEDS_PRODUCT_INPUT: {the specific BRD ambiguity, quoted}
 === END REPORT ===
@@ -63,6 +76,7 @@ DETAILS:
 ## MUST DO
 - Write use cases before stories (stories without flows produce untestable ACs).
 - Make every AC observable and testable; cover every exception flow.
+- Set a tier on every story from the signal table — the whole downstream depth depends on it.
 - Provide the exact registration JSON in DETAILS.
 
 ## MUST NOT DO

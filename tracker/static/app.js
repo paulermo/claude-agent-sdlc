@@ -144,8 +144,17 @@
     return `<div class="task" data-item="${esc(id)}">
       <div class="id mono">${esc(id)}${entry.assignee ? " · " + esc(entry.assignee) : ""}</div>
       <div class="t">${esc(entry.title)}</div>
-      <div class="meta">${chip(entry.status)}${entry.epic ? `<span class="chip neutral">${esc(entry.epic)}</span>` : ""}</div>
+      <div class="meta">${chip(entry.status)}${entry.epic ? `<span class="chip neutral">${esc(entry.epic)}</span>` : ""}${kindTierChips(entry)}</div>
     </div>`;
+  }
+
+  // v1.6: kind (bug), tier, and rework returns — absent fields mean story / standard / 0.
+  function kindTierChips(entry) {
+    const out = [];
+    if (entry.kind === "bug") out.push(`<span class="chip blocked">bug</span>`);
+    if (entry.tier && entry.tier !== "standard") out.push(`<span class="chip neutral">${esc(entry.tier)}</span>`);
+    if (entry.returns) out.push(`<span class="chip review">↩ ${esc(String(entry.returns))}</span>`);
+    return out.join("");
   }
 
   function planningStrip() {
@@ -253,7 +262,9 @@
         <div class="doc">${mdRender(doc.markdown)}</div>`;
       return;
     }
-    const kv = [["epic", e.epic], ["branch", e.branch], ["worktree", e.worktree],
+    const kv = [["epic", e.epic], ["kind", e.kind], ["tier", e.tier],
+      ["returns", e.returns != null ? String(e.returns) : null], ["origin", e.origin], ["record", e.record],
+      ["branch", e.branch], ["worktree", e.worktree],
       ["assignee", e.assignee], ["bucket", it.bucket], ["type", e.type]]
       .filter(([, v]) => v)
       .map(([k, v]) => `<dt>${k}</dt><dd class="mono">${esc(v)}</dd>`).join("");

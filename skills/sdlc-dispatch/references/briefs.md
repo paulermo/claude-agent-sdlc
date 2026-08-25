@@ -2,7 +2,9 @@
 
 Copy the template for the agent you are dispatching, fill every `{placeholder}`, send as the agent's task prompt. Write `none` rather than deleting a section.
 
-Placeholder legend: `{ITEM-ID}` = story/task ID; `{worktree}` = path from `project.json` worktrees; `{feedback-file}` = the PATH stored in the state feedback field (e.g. `docs/reviews/{STORY-ID}-2.md`) — the agent reads that file; never paste the feedback text into the brief; `{PREFIX}` = project prefix from `project.json`.
+Placeholder legend: `{ITEM-ID}` = story/bug/task ID; `{worktree}` = path from `project.json` worktrees; `{feedback-file}` = the PATH stored in the state feedback field (e.g. `docs/reviews/{STORY-ID}-2.md`) — the agent reads that file; never paste the feedback text into the brief; `{PREFIX}` = project prefix from `project.json`; `{tier}` / `{returns}` / `{kind}` = from the item's entry (absent = `standard` / `0` / `story`); `{budget}` = the tier's return budget (sdlc-state section 4); `{record path}` = the bug entry's `record` field.
+
+**Brief cap (LAW, sdlc-dispatch section 1):** the filled template and nothing else — `WHY` is the only free text (≤ 2 sentences). If an agent needs more, it is in a file the brief points to.
 
 Teammate note: when the agent runs as a **team teammate** (not a subagent), its `skills:` frontmatter is NOT applied — the "preloaded" skill is absent. The agent's own definition tells it to load the skill via the Skill tool in that case; the DISCIPLINE section's skill name is what it loads. Do not strip DISCIPLINE from any brief.
 
@@ -62,9 +64,9 @@ Do NOT read: other epics' stories.
 
 DISCIPLINE: preloaded story-breakdown skill. Never edit docs/state/*.json — report the entries to register and I will write them.
 
-DELIVERABLE: use-case files + story files committed, and in DETAILS the exact JSON entry per story (schema from your skill) for me to register.
+DELIVERABLE: use-case files + story files committed (each story with a **Tier:** line from your skill's tier table), and in DETAILS the exact JSON entry per story (schema from your skill — kind, tier, returns included) for me to register.
 
-VERIFICATION: each story maps to ≥1 use case, has testable acceptance criteria, and passes your skill's sizing signals.
+VERIFICATION: each story maps to ≥1 use case, has testable acceptance criteria, has a tier, and passes your skill's sizing signals.
 
 Report envelope, OUTCOME: BROKEN_DOWN | NEEDS_PRODUCT_INPUT | BLOCKED. NEEDS_PRODUCT_INPUT must name the ambiguity — I will re-dispatch Product Manager.
 ```
@@ -80,7 +82,7 @@ INPUTS: docs/project.md, docs/requirements/ (BRDs + use cases for this epic), do
 
 DISCIPLINE: preloaded architecture-design skill, Design Mode. Rules you write go to .claude/rules/ (NOT docs/rules/). Never edit docs/state/*.json.
 
-DELIVERABLE: (1) .claude/rules/architecture.md + .claude/rules/quality-gate.md with EXACT project commands — both MANDATORY; (2) domain rules customized for the stack; (3) ## Technical Notes in every story of the epic; (4) ## Architecture Notes in epic.md. All committed.
+DELIVERABLE: (1) .claude/rules/architecture.md + .claude/rules/quality-gate.md with EXACT project commands — both MANDATORY; (2) domain rules customized for the stack; (3) ## Technical Notes in every story of the epic, and a corrected **Tier:** line where your design reveals a critical signal the Analyst missed (list every tier change in DETAILS — I update state); (4) ## Architecture Notes in epic.md. All committed.
 
 VERIFICATION: I will check architecture.md and quality-gate.md exist and quality-gate.md contains runnable commands (no {placeholders} left), and that every story has Technical Notes.
 
@@ -174,15 +176,16 @@ DELIVERABLE: design notes in stories (## Design section), design-system rule upd
 Report envelope, OUTCOME: DESIGNED | BLOCKED. In DETAILS: decisions made (autonomous mode) or user-approved options (interactive).
 ```
 
-## Developer
+## Developer — story (first dispatch)
 
 ```
 Implement story {STORY-ID}: {title}.
 
 WHY: {one sentence: what this story delivers to the user}.
 
+KIND: story · TIER: {tier}
 WORKTREE: {worktree} on branch {branch}. Work ONLY there.
-{If rework:} PRIOR FEEDBACK: read {feedback-file} FIRST and fix ALL of it.
+FOLLOW-UPS: {docs/issues/{EPIC-ID}-{slug}/followups.md | none} — close open entries whose instances are in files you modify anyway; never open other files for them.
 
 INPUTS (read in this order):
 1. docs/issues/{EPIC-ID}-{slug}/{STORY-ID}-{slug}.md — the story (your checklist lives here)
@@ -191,48 +194,99 @@ INPUTS (read in this order):
 4. .claude/rules/quality-gate.md — the EXACT verification commands
 Do NOT read: other stories, other epics.
 
-DISCIPLINE: your workflow is the preloaded story-implementation skill — follow its path selection (OpenSpec vs spec-lite) exactly. Rules in .claude/rules/ are law — load your domain's before coding. Never edit docs/state/*.json. Commit as {STORY-ID}: {description} [by Developer].
+DISCIPLINE: your workflow is the preloaded story-implementation skill — follow its path selection (OpenSpec vs spec-lite) exactly. Rules in .claude/rules/ are law — load your domain's before coding. Never edit docs/state/*.json, the follow-ups file, or bug records. Commit as {STORY-ID}: {description} [by Developer].
 
 DELIVERABLE: implementation + tests, all quality-gate commands green, story checkboxes ticked, committed and pushed if remote exists.
 
 VERIFICATION: I will check commits exist, EVIDENCE contains actual test/lint output summaries, and story checkboxes match reality.
 
-Report envelope, OUTCOME: IMPLEMENTED | BLOCKED. EVIDENCE must include each quality-gate command with its result.
+Report envelope, OUTCOME: IMPLEMENTED | BLOCKED. EVIDENCE must include each quality-gate command with its result; DETAILS carries an OUT OF SCOPE line per defect you noticed but did not fix.
+```
+
+## Developer — rework (after review_rejected / qa_rejected)
+
+```
+Rework {ITEM-ID}: {title} — return {returns} of {budget}.
+
+WHY: {one clause: the top blocking finding}.
+
+KIND: {kind} · TIER: {tier}
+WORKTREE: {worktree} on branch {branch}. Work ONLY there; your prior work is already committed here.
+FEEDBACK: {feedback-file} — read it FIRST; fix every Mandatory and Important-blocking finding; Follow-ups only in files you change anyway.
+FOLLOW-UPS: {path | none}
+
+INPUTS: the feedback file, the files it names, .claude/rules/quality-gate.md, and ONLY the rules the findings cite.
+Do NOT re-read: the use case, the epic notes, the full rules tree, other stories — you followed them once; the findings are the reading list.
+
+DISCIPLINE: preloaded story-implementation skill, section 2b (Rework): no refactoring beyond the findings; a finding you believe is wrong gets a DISPUTED line in DETAILS, never silence. Never edit docs/state/*.json.
+
+DELIVERABLE: every finding FIXED (or DISPUTED with grounds), full quality gate green, committed and pushed if remote exists.
+
+VERIFICATION: I will check new commits exist and EVIDENCE lists each quality-gate command's result and each finding's outcome.
+
+Report envelope, OUTCOME: IMPLEMENTED | BLOCKED.
+```
+
+## Developer — bug
+
+```
+Fix bug {BUG-ID}: {title}.
+
+WHY: {one clause: what is broken and for whom}.
+
+KIND: bug · TIER: {tier} · BUDGET: 1 return
+WORKTREE: {worktree} on branch {branch}. Work ONLY there.
+RECORD: {record path} — symptom, reproduction, expected, acceptance, scope hints. It is the whole specification: there is no story and no use case.
+FOLLOW-UPS: {path | none}
+
+INPUTS: the bug record, .claude/rules/quality-gate.md, the rules for the domains the scope hints name.
+Do NOT read: stories, use cases, epic notes, other bugs.
+
+DISCIPLINE: preloaded story-implementation skill, Bug path (section 1b): reproduce with a failing test named after {BUG-ID}, fix the cause, full gate green. No design.md / tasks.md / OpenSpec. Never edit docs/state/*.json or the record. Commit as {BUG-ID}: Fix {what} [by Developer].
+
+DELIVERABLE: the reproducing test + the fix, quality gate green, committed and pushed if remote exists.
+
+VERIFICATION: I will check the test exists and names {BUG-ID}, EVIDENCE shows it failing before and passing after, and each quality-gate command's result.
+
+Report envelope, OUTCOME: IMPLEMENTED | BLOCKED (cannot reproduce → BLOCKED with what you tried).
 ```
 
 ## Reviewer
 
 ```
-Review story {STORY-ID}: {title}.
+Review {ITEM-ID}: {title}.
 
-WHY: gate before QA — story compliance and rules compliance.
+WHY: gate before {QA | merge} — story compliance and rules compliance at the item's tier.
 
+KIND: {kind} · TIER: {tier} · ROUND: {returns + 1}
+{Round ≥ 2:} PRIOR REVIEW: {feedback-file} · PRIOR HEAD: {the Head sha from that file} — scope = prior findings + the delta since PRIOR HEAD (re-review scope law).
 WORKTREE: {worktree} (Developer's, read-only for you).
 
-INPUTS: the story file + its use case, epic architecture notes, .claude/rules/ (all domains touched by the diff), the diff: git -C {worktree} diff {feature-branch}...HEAD
+INPUTS: {story: the story file + its use case, epic architecture notes | bug: the bug record {record path}}, .claude/rules/ (all domains touched by the diff), the diff: {round 1: git -C {worktree} diff {feature-branch}...HEAD | round ≥ 2: git -C {worktree} diff {PRIOR HEAD}..HEAD}
 
-DISCIPLINE: preloaded story-review skill — severity discipline is mechanical, follow it. You are read-only: no source edits, no state edits.
+DISCIPLINE: preloaded story-review skill — lenses by tier, severity mechanical, verdict by round, one finding per class with its instances. You are read-only: no source edits, no state edits.
 
-DELIVERABLE: the full review document (format from your skill) in DETAILS — you are read-only, so I will save it to docs/reviews/{STORY-ID}-{n}.md and commit it.
+DELIVERABLE: the full review document (format from your skill, Head sha included) in DETAILS — you are read-only, so I will save it to docs/reviews/{ITEM-ID}-{round}.md and commit it.
 
-Report envelope, OUTCOME: APPROVED | REJECTED. REJECTED requires ≥1 MANDATORY or IMPORTANT finding; NOTE-only reviews are APPROVED.
+Report envelope, OUTCOME: APPROVED | REJECTED. REJECTED requires ≥1 MANDATORY or ≥1 blocking IMPORTANT per your verdict table; other IMPORTANTs go to ## Follow-ups and do not block; NOTE-only reviews are APPROVED.
 ```
 
 ## QA — standard mode
 
 ```
-Test story {STORY-ID}: {title}.
+Test {ITEM-ID}: {title}.
 
-WHY: verify the story's acceptance criteria end-to-end before merge.
+WHY: verify the item's acceptance criteria end-to-end before merge.
 
+KIND: {kind} · TIER: {tier} {if light story / light-or-standard bug: "— normally not QA'd; dispatched because: {one clause}"}
 WORKTREE: {worktree}. Ports for parallel Docker: COMPOSE_PROJECT_NAME={item-id-lower} APP_PORT={app} DB_PORT={db} (from project.json worktrees).
-{If re-test:} PRIOR QA FEEDBACK: read {feedback-file} — verify every item in it is fixed.
+{If re-test:} PRIOR QA FEEDBACK: read {feedback-file} — verify every item in it is fixed; re-test the delta and the flows it touches.
 
-INPUTS: story file (acceptance criteria), use case (flows), .claude/rules/quality-gate.md, docs/state/environments.json if E2E against a deployed env is configured.
+INPUTS: {story file (acceptance criteria) + use case (flows) | bug record {record path}}, .claude/rules/quality-gate.md, docs/state/environments.json if E2E against a deployed env is configured.
 
-DISCIPLINE: preloaded story-qa skill, standard mode. You may write test files only — never application source, never docs/state/*.json.
+DISCIPLINE: preloaded story-qa skill, standard mode, depth by tier. You may write test files only — never application source, never docs/state/*.json. Defects outside this item's ACs go under ## Out-of-scope defects — never into the verdict, never as story proposals.
 
-DELIVERABLE: E2E tests covering every acceptance criterion, committed; execution evidence.
+DELIVERABLE: E2E tests per the tier's coverage law, committed; execution evidence.
 
 Report envelope, OUTCOME: PASSED | FAILED. FAILED requires reproduction steps per failure in DETAILS.
 ```
@@ -250,15 +304,15 @@ INPUTS: .claude/rules/quality-gate.md (FULL suite commands), the merged story's 
 
 DISCIPLINE: preloaded story-qa skill, regression mode.
 
-Report envelope, OUTCOME: PASSED | FAILED. EVIDENCE: full-suite results + spot-check outcomes + merge-artifact scan (<<<<<<< markers).
+Report envelope, OUTCOME: PASSED | FAILED. EVIDENCE: full-suite results + spot-check outcomes + merge-artifact scan (<<<<<<< markers). A FAILED becomes a bug I register — DETAILS must carry the failing command and reproduction.
 ```
 
 ## Deploy — story merge
 
 ```
-Merge story {STORY-ID} into {feature-branch}.
+Merge {ITEM-ID} ({kind}, branch {branch}) into {feature-branch}.
 
-WHY: QA passed; integrate before regression.
+WHY: {QA passed | review passed (standard bug) | gate passed (light item)}; integrate before regression.
 
 WORKING DIR: {worktree_dir}/{EPIC-ID}-merge (I created it on {feature-branch}). Work ONLY there.
 
@@ -266,7 +320,7 @@ INPUTS: .claude/rules/quality-gate.md, docs/state/active.json (READ ONLY — for
 
 DISCIPLINE: preloaded story-merge skill — its conflict-resolution table is law (NEVER -X theirs/ours). Never edit docs/state/*.json; if state files conflict, keep the {feature-branch} side.
 
-Report envelope, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED. EVIDENCE: quality-gate results after merge; conflicts resolved (files + strategy).
+Report envelope, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED. EVIDENCE: quality-gate results after merge; conflicts resolved (files + strategy). A VERIFICATION_FAILED becomes a bug I register — DETAILS must carry the failing output.
 ```
 
 ## Deploy — epic merge to main
@@ -274,7 +328,7 @@ Report envelope, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED. EVIDENCE:
 ```
 Merge {feature-branch} into main for {EPIC-ID}.
 
-WHY: all stories done; ship the epic.
+WHY: every story and bug done, follow-ups closed; ship the epic.
 
 WORKING DIR: the main working copy (I am pausing all other dispatches until you finish). Confirm `git status` is clean and branch is main before starting; abort with OUTCOME: MERGE_FAILED if not.
 

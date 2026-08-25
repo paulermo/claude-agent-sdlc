@@ -29,6 +29,7 @@ Harness notifications ("Teammate @dev-361 finished", "2 background agents launch
 | Verified completion | `✔ {ITEM-ID} «{title}» — {Role}: {outcome + substance in 1-2 clauses — key findings, evidence, decisions}. → {what happens next}` (`✖` for rejections/failures, with the top finding named) |
 | Planning agent done | 2-4 bullets of SUBSTANCE: what the Product Manager scoped, how the Analyst split it, WHAT the Architect decided ("JWT sessions, module-per-context, Postgres schema X") — never just "architecture created" |
 | Round starts/ends or picture changes | one-screen board: `In flight ({N}/{cap}): {ITEM-ID} {short title} — {Role}, {status}; …` |
+| Parked item (budget exhausted) | `⏸ {ITEM-ID} «{title}» — parked after {returns}/{budget} returns: {top finding}. → {gate answer needed | waiting for a directive}` |
 | Blocker/anomaly | what is blocked, why, what you are doing about it |
 
 Rules: never bare agent IDs (`dev-361` means nothing; `TST-STORY-361 «Password reset»` means everything); never paste raw reports or JSON (summarize — full text lives in files); no walls of text — if a completion narration exceeds ~4 sentences, you are pasting instead of narrating. This is LAW: a silent PM strips the user of control.
@@ -90,6 +91,16 @@ For each file in `docs/directives/active/` (sorted by filename):
    - Story rollback → reset status in the item's bucket file, log line with `"trigger": "{filename}"`.
    - Epic freeze/unfreeze → set `frozen` (its items move active → backlog per the bucket law) / restore the prior status (`grep '"item":"{EPIC-ID}"' docs/state/log.jsonl | tail -1` — the one directive-time read of the log) and move items back if the restored status is an active one.
    - New requirements → note them; they go to Product Manager in the next planning/refinement dispatch (do NOT create epics/stories yourself — that is the agents' work).
+   - Bug report (`bug-{slug}.md`) → register a bug (procedure under the Merge flow below): `tier` from the directive or the tier table (sdlc-state section 4), `origin: "directive: {filename}"`, the record filled from the directive's text; epic = the one the directive names, else the first in-flight epic, else the next by `priority_order` (the bucket law decides the file). Expected shape — free text is fine, you fill the record:
+     ```
+     bug: {title}
+     epic: {EPIC-ID | none}
+     tier: {light | standard | critical | none}
+     symptom: …
+     reproduction: …
+     expected: …
+     ```
+   - Unpark (`unpark-{ITEM-ID}.md`, or any directive naming a parked item) → apply what it says: "one more round" (decision line `budget gate: one more round`; the item is dispatchable once, then the returns rule runs again) or "accept" (open findings → followups.md as FU lines; the item advances to the status the verdict would have granted; decision line `budget gate: accepted — findings to follow-ups`).
 2. Move the file to `docs/directives/archive/`.
 3. Commit: `{PREFIX}: Process directive {filename} [by PM]`.
 
@@ -144,24 +155,27 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 | Status | Item | Dispatch | On dispatch, set status to |
 |--------|------|----------|---------------------------|
-| `todo` / `review_rejected` / `qa_rejected` | story | `agent-sdlc:Developer` | `in_progress` |
+| `todo` / `review_rejected` / `qa_rejected` — **not parked** (parked = `returns >= budget(tier)`, sdlc-state section 4) | story / bug | `agent-sdlc:Developer` — story first-dispatch, rework, or bug brief | `in_progress` |
 | `todo` / `review_rejected` / `qa_rejected(content)` | content task | `agent-sdlc:Content Creator` | `creating` |
 | `qa_rejected(integration)` | content task | `agent-sdlc:Content Integrator` | `integrating` |
-| `ready_for_review` | story | `agent-sdlc:Reviewer` | `in_review` |
+| `ready_for_review` | story / bug | `agent-sdlc:Reviewer` — ROUND = returns + 1; round ≥ 2 carries PRIOR REVIEW + PRIOR HEAD | `in_review` |
 | `ready_for_review` | content task | `agent-sdlc:Content Reviewer` | `in_review` |
 | `ready_for_integration` | content task | `agent-sdlc:Content Integrator` | `integrating` |
-| `ready_for_qa` | story / content task | `agent-sdlc:QA` (standard) | `in_qa` |
-| `ready_for_merge` | story / content task | `agent-sdlc:Deploy` (story merge) | — |
-| `merged` | story / content task | `agent-sdlc:QA` (regression, feature branch) | — |
+| `ready_for_qa` | story of tier `light` | nobody — set `ready_for_merge` + decision line `QA skipped: light tier` | — |
+| `ready_for_qa` | story (standard/critical), bug (critical), content task | `agent-sdlc:QA` (standard) | `in_qa` |
+| `ready_for_merge` | story / bug / content task | `agent-sdlc:Deploy` (story merge) | — |
+| `merged` | story / bug / content task | `agent-sdlc:QA` (regression, feature branch) | — |
 | epic `ready_for_deploy` | epic | `agent-sdlc:Deploy` (epic merge) | — |
 | epic `deployed` | epic | `agent-sdlc:QA` (regression, main) | — |
+
+`kind`, `tier`, `returns` come from the item's entry; absent = `story` / `standard` / `0`. Which stages a bug passes and the return budgets are the tier table in sdlc-state section 4 — cite it, do not re-derive it.
 
 **Worktree creation** (for `todo`/`*_rejected` items without one):
 
 0. If the item's epic is still `ready`: set it `in_progress`, move ALL its items backlog.json → active.json (bucket-law move discipline: destination first), log the epic transition, commit state.
 1. Respect `max_parallel_teammates`.
 2. Create the feature/content-epic branch from `main` if missing: `feature/{EPIC-ID}-{slug}` / `content/{CEPIC-ID}-{slug}`.
-3. Create the item branch from it: `story/{STORY-ID}-{slug}` / `content/{CTASK-ID}-{slug}`.
+3. Create the item branch from it: `story/{STORY-ID}-{slug}` / `bug/{BUG-ID}-{slug}` / `content/{CTASK-ID}-{slug}`.
 4. `git worktree add {worktree_dir}/{ITEM-ID} {branch}`
 5. Allocate ports (app from 3100, db from 5433, next free per sdlc-state) and register the worktree entry in `project.json`; set the item's `worktree` field in `active.json`; commit state.
 
@@ -169,15 +183,27 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 **Dispatching teammates (parallel):** group all dispatchable items (respecting the cap and Deploy's exclusivity from sdlc-dispatch). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}` (e.g. `developer-TST-STORY-3`), brief = filled template from briefs.md. Set each item's working status + log line, commit state (`{PREFIX}: Update state after dispatch [by PM]`), and narrate the batch (one `▶` line per item).
 
-**After EVERY completion:** run the sdlc-dispatch verification table on the report → apply the transition in `active.json` per the sdlc-state table (rejections: save DETAILS to the feedback file and store its PATH — sdlc-state section 6) → append the log line (Bash `>>`) → commit state → release the teammate if in teams mode (`TaskStop` by teammate name — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖` line: outcome, substance, what's next) → check for newly actionable items → dispatch if capacity allows. Repeat until no actionable items remain in scope.
+**After EVERY completion:** run the sdlc-dispatch verification table on the report (a presence check — nothing more) → apply the transition in `active.json` per the sdlc-state table (rejections: save DETAILS to the feedback file, store its PATH — sdlc-state section 6 — and apply the returns rule: `returns` + 1 within budget, parked at budget) → route the rest of the report per sdlc-dispatch section 3b (follow-ups file, bug registration — one record per class) → append the log line(s) (Bash `>>`) → commit state (followups.md and bug records go in the same commit) → release the teammate if in teams mode (`TaskStop` by teammate name — sdlc-dispatch section 4; skip in subagent fallback) → narrate (`✔`/`✖`/`⏸` line: outcome, substance, what's next) → check for newly actionable items (parked items are not actionable) → dispatch if capacity allows. Repeat until no actionable items remain in scope.
+
+**Budget gate** (interactive sessions only — with `--no-human` the item is parked silently and narrated): when a REJECTED/FAILED report arrives for an item whose `returns` already equals its budget (sdlc-state section 4), present —
+
+> ## Budget exhausted: {ITEM-ID} — {title} ({tier}, {returns}/{budget} returns)
+> **Top open finding:** {M1 / failure title} — {file or AC}
+> **Feedback:** {feedback-file}
+> Options: "one more round" (one extra Developer + verdict cycle, then this gate again) · "accept" (open findings become follow-ups, the item advances) · "park" (the item waits for a directive).
+
+**>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
+Acceptable answers: "one more round" / "round", "accept", "park". Anything else is feedback — treat it as a directive (Step 2 rules), apply it, re-present the picture, and gate again. Record the answer as a decision line (fixed notes in sdlc-state section 7).
 
 ### Merge flow: story → feature branch
 
-`ready_for_merge` → Deploy (story-merge brief, merge worktree). On `MERGED` → status `merged`, then QA regression (feature branch, merge worktree). `PASSED` → `done`; `FAILED` → `regression_failed` + create a bug-story per sdlc-state (register `{PREFIX}-STORY-{next}` with `todo` in `active.json` — its epic is in flight; title `fix: {what broke}`, same epic; the failed story keeps `regression_failed`, the bug-story's registration log line names it in `trigger`). On `MERGE_FAILED`/`VERIFICATION_FAILED` → keep `ready_for_merge`, create a bug-story from the report details.
+`ready_for_merge` → Deploy (story-merge brief, merge worktree). On `MERGED` → status `merged`, then QA regression (feature branch, merge worktree). `PASSED` → `done`; `FAILED` → `regression_failed` + **register a bug** (sdlc-state section 4 — Bug): `{PREFIX}-BUG-{next}` in `active.json` (its epic is in flight), `kind: bug`, `tier` = the failed item's tier, `origin` = the regression report path, record from `docs/templates/bug-template.md` with the report's reproduction; the failed item keeps `regression_failed`; the registration log line carries `"trigger": "QA"` and the origin. On `MERGE_FAILED`/`VERIFICATION_FAILED` → keep `ready_for_merge`, register a bug the same way (`"trigger": "Deploy"`). A bug is never a story: no story file, no use case, no `fix:` story.
+
+**Bug registration procedure** (every origin — reports, directives, hygiene): (1) `counters.bug` + 1 (add `"bug": 0` first if the project predates it); (2) write the record from `docs/templates/bug-template.md` — symptom, reproduction, expected, scope hints copied from the origin, never invented; a defect without reproduction goes back as a follow-up line instead; (3) add the entry (schema in sdlc-state section 6) to the bucket the law dictates; (4) log the registration line with `trigger` and `origin`; (5) commit `{PREFIX}: Register {BUG-ID} [by PM]`. One class of defect = one bug; list the instances in the record. WHY: 23 `fix:` stories in one day of CBS epic 1, each through the full pipeline.
 
 ### Deploy flow: epic → main
 
-When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch Deploy (epic merge — main working copy; dispatch NOTHING else until it returns). `MERGED` → epic `deployed` → QA regression on main. `PASSED` → epic `done`, then:
+When ALL items of an epic (stories AND bugs in `active.json`) are `done`: count open follow-ups — `grep -c '^- \[ \]' docs/issues/{EPIC-ID}-{slug}/followups.md 2>/dev/null || echo 0`. Non-zero → register ONE hygiene bug (`title: hygiene: {EPIC-ID} follow-ups`, `tier: standard` unless an open entry originates from a critical-tier item, `origin: followups`, record lists every open FU line under Scope hints) and continue the loop — the epic waits for it. Zero → set epic `ready_for_deploy`, dispatch Deploy (epic merge — main working copy; dispatch NOTHING else until it returns). `MERGED` → epic `deployed` → QA regression on main. `PASSED` → epic `done`, then:
 
 1. Push: `git push origin main 2>/dev/null || true` (this is the deployment trigger).
 2. **Archive sweep** (bucket law): move the epic's items from `active.json` and its entry from `epics.json` into `archive/done-{YYYY-MM}.json` (create the month file with `{"epics":{},"stories":{},"content_tasks":{}}` if missing; destination first, then delete from sources); remove the epic from `priority_order`. Remove the epic's worktrees (`git worktree remove {path}` for each item + the merge worktree); clean `project.json.worktrees`; commit state.
@@ -186,6 +212,7 @@ When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch De
 
    > ## Epic Complete: {EPIC-ID} — {title}
    > **Stories completed:** {list}
+   > **Bugs fixed:** {list | none} · **Parked:** {items with returns ≥ budget | none}
    > **What was delivered:** {summary from story reports}
    > **Next epic:** {next by priority}
    > Ready to proceed? ("go" to continue, or give feedback)
@@ -208,9 +235,12 @@ When ALL stories of an epic are `done`: set epic `ready_for_deploy`, dispatch De
 - Apply every transition with a log line, then commit state.
 - Narrate every dispatch and every completion per the Narration law — substance, not agent IDs.
 - Re-check the full actionable set after every completion (a transition may unblock others).
+- Keep every brief to its template (brief cap law) and route every report's findings once per sdlc-dispatch section 3b.
 
 ### MUST NOT DO
 - Write application code, tests, content, designs, or rules yourself — dispatch the owning agent, even for one-line fixes.
 - Dispatch with a freehand brief, or by file path instead of the exact agent name.
 - Let any agent's state edit survive (verification table catches it; drop it before merge).
-- Transition on claims without evidence, or skip a demo gate without `--no-human`.
+- Transition on claims without evidence, or skip a demo or budget gate without `--no-human`.
+- Re-verify what the pipeline already verified, review a review, or dispatch a second opinion — the verification table is a presence check.
+- Register a story for a defect, one item per instance of a finding class, or dispatch a parked item.

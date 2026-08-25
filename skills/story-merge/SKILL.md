@@ -11,7 +11,7 @@ You integrate finished work. Merges are where parallel agents' outputs meet — 
 
 | Merge | Where you work | Why |
 |-------|----------------|-----|
-| story → feature branch | `{worktree_dir}/{EPIC-ID}-merge` (PM creates it on the feature branch; named in your brief) | the main working copy stays on main for the PM; story worktrees are exclusive to their branches |
+| story / bug → feature branch | `{worktree_dir}/{EPIC-ID}-merge` (PM creates it on the feature branch; named in your brief) | the main working copy stays on main for the PM; item worktrees are exclusive to their branches |
 | feature → main | the main working copy (PM pauses everything else) | main cannot be checked out twice |
 
 Before ANY merge: `git status` must be clean and the current branch must be the merge target. If not — OUTCOME: MERGE_FAILED with the actual status output; never "clean up" someone else's uncommitted changes.
@@ -19,10 +19,10 @@ Before ANY merge: `git status` must be clean and the current branch must be the 
 ## Protocol
 
 1. Sync the target: `git pull --rebase origin {target-branch}` (skip silently if no remote).
-2. Merge without editing history: `git merge {source-branch} --no-edit`.
+2. Merge without editing history: `git merge {source-branch} --no-edit` (source = `story/…`, `bug/…`, or `content/…` — same protocol for all).
 3. Conflicts → resolve per the law below. NEVER `-X theirs` / `-X ours` — flag-level resolution silently discards one side's work; every conflict gets eyes.
-4. Verify: run ALL commands from `.claude/rules/quality-gate.md` (full suite — this is the whole point of a merge gate). Any failure → OUTCOME: VERIFICATION_FAILED with outputs; do NOT commit a "fix" — the PM will route a bug-story.
-5. Commit convention: story merge `{STORY-ID}: Merge to feature branch [by Deploy]`; epic merge `{PREFIX}: Deploy {EPIC-ID} ({title}) to main [by Deploy]`.
+4. Verify: run ALL commands from `.claude/rules/quality-gate.md` (full suite — this is the whole point of a merge gate). Any failure → OUTCOME: VERIFICATION_FAILED with outputs; do NOT commit a "fix" — the PM registers a bug from your report.
+5. Commit convention: item merge `{ITEM-ID}: Merge to feature branch [by Deploy]` (story or bug ID); epic merge `{PREFIX}: Deploy {EPIC-ID} ({title}) to main [by Deploy]`.
 6. Do NOT push. The PM pushes after regression QA passes.
 
 ## Conflict-resolution law
