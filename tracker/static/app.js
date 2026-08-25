@@ -148,12 +148,21 @@
     </div>`;
   }
 
-  // v1.6: kind (bug), tier, and rework returns — absent fields mean story / standard / 0.
+  // v1.6: kind (bug), tier, rework returns vs the tier's budget, and parking —
+  // absent fields mean story / standard / 0 (sdlc-state §4). Epic children carry
+  // the entry kind as item_kind (their `kind` is the bucket map name).
+  const BUDGET = { light: 1, standard: 2, critical: 3 };
   function kindTierChips(entry) {
+    const isBug = entry.kind === "bug" || entry.item_kind === "bug";
+    const tier = entry.tier || "standard";
+    const budget = isBug ? 1 : (BUDGET[tier] || 2);
+    const returns = Number(entry.returns) || 0;
+    const parked = returns >= budget && ["review_rejected", "qa_rejected"].includes(entry.status);
     const out = [];
-    if (entry.kind === "bug") out.push(`<span class="chip blocked">bug</span>`);
-    if (entry.tier && entry.tier !== "standard") out.push(`<span class="chip neutral">${esc(entry.tier)}</span>`);
-    if (entry.returns) out.push(`<span class="chip review">↩ ${esc(String(entry.returns))}</span>`);
+    if (isBug) out.push(`<span class="chip blocked">bug</span>`);
+    if (tier !== "standard") out.push(`<span class="chip neutral">${esc(tier)}</span>`);
+    if (returns) out.push(`<span class="chip review">↩ ${returns}/${budget}</span>`);
+    if (parked) out.push(`<span class="chip blocked">parked</span>`);
     return out.join("");
   }
 
@@ -194,7 +203,7 @@
 
   function itemRow(id, e) {
     return `<div class="row" data-item="${esc(id)}"><span class="id mono">${esc(id)}</span>
-      <span class="t">${esc(e.title)}</span>${chip(e.status)}</div>`;
+      <span class="t">${esc(e.title)}</span>${chip(e.status)}${kindTierChips(e)}</div>`;
   }
 
   function groupByEpic(bucket) {
@@ -273,7 +282,7 @@
     const decomposition = it.kind === "epic" && it.children && it.children.length
       ? `<div class="group"><div class="card">
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
-            <h3 style="margin:0;font-size:12px;color:var(--ink-2)">Stories &amp; tasks</h3>
+            <h3 style="margin:0;font-size:12px;color:var(--ink-2)">Stories, bugs &amp; tasks</h3>
             <div style="flex:1;max-width:260px">${meter(prog)}</div>
           </div>
           <div class="rows">${it.children.map(c => itemRow(c.id, c)).join("")}</div>
@@ -281,7 +290,7 @@
       : "";
     view.innerHTML = `<div class="crumbs"><a href="#/${it.kind === "epic" ? "roadmap" : "board"}">← back</a></div>
       <div class="item-head"><h2>${esc(e.title || it.id)}</h2>${chip(e.status, it.kind === "epic" ? EPIC_CLS[e.status] : undefined)}
-        <span class="chip neutral">${esc(it.kind)}</span></div>
+        <span class="chip neutral">${esc(e.kind === "bug" ? "bug" : it.kind)}</span>${e.kind === "bug" ? "" : kindTierChips(e)}</div>
       <div class="id mono" style="color:var(--muted)">${esc(it.id)}</div>
       <dl class="kv">${kv}</dl>
       ${it.related.length ? `<div class="related">${it.related.map(r =>

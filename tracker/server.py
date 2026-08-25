@@ -242,7 +242,9 @@ def epic_children(item_id, buckets):
             for cid, ce in bucket.get(kind, {}).items():
                 if ce.get("epic") == item_id:
                     children.append({"id": cid, "title": ce.get("title"), "status": ce.get("status"),
-                                     "kind": kind, "bucket": bucket_name})
+                                     "kind": kind, "bucket": bucket_name,
+                                     "item_kind": ce.get("kind", "story"), "tier": ce.get("tier"),
+                                     "returns": ce.get("returns")})
     return sorted(children, key=lambda c: id_sort_key(c["id"]))
 
 
@@ -281,13 +283,19 @@ def api_item(proj, item_id):
         hits = sorted(proj.glob("docs/issues/%s-*/epic.md" % item_id))
     else:
         epic_id = entry.get("epic", "")
-        hits = sorted(proj.glob("docs/issues/%s-*/%s-*.md" % (epic_id, item_id)))
+        record = entry.get("record")
+        hits = [proj / record] if isinstance(record, str) and safe_doc_path(proj, record) else []
         if not hits:
-            hits = sorted(proj.glob("docs/issues/*/%s-*.md" % item_id))
+            hits = sorted(proj.glob("docs/issues/%s-*/%s-*.md" % (epic_id, item_id)))
+        if not hits:
+            hits = sorted(proj.glob("docs/issues/%s-*/bugs/%s-*.md" % (epic_id, item_id)))
+        if not hits:
+            hits = sorted(proj.glob("docs/issues/*/%s-*.md" % item_id)) or \
+                   sorted(proj.glob("docs/issues/*/bugs/%s-*.md" % item_id))
     if hits:
         doc_path = str(hits[0].relative_to(proj))
     related = []
-    for field in ("review_feedback", "qa_feedback", "regression_feedback"):
+    for field in ("origin", "review_feedback", "qa_feedback", "regression_feedback"):
         val = entry.get(field)
         if isinstance(val, str) and val.startswith("docs/"):
             related.append({"label": field.replace("_", " "), "path": val})
