@@ -66,7 +66,7 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
        epics delivered {d}/{n} ({x} awaiting main regression) · items done {i}/{t} (slice planned {p})
        in flight: {EPIC-ID} {batch stage / gate run N}; {EPIC-ID} {k} in review, {m} in progress
        blocked: {ITEM-ID} parked (budget gate); {ID} held ({reason}); {EPIC-ID} frozen
-     {PREFIX}-MS-{K} {title}  [planned]  epics 0/{n} · items 0/{t}
+     {PREFIX}-MS-{K} {title}  [planned]  epics {d}/{n} · items {i}/{t}
    Epics:
      {PREFIX}-EPIC-{N} {title}  [MS-{K}]  [{done}/{total} stories done]  [{status}]  [{lane}]  [{batch stage}]
      ...
@@ -94,7 +94,7 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
 
    - `Open notes`: every line of step 5's notes command, zero counts included (`none` when no fast-lane epic is in flight). `Open follow-ups`: only non-zero counts, `{total}` = their sum (`none` when the sum is 0). `Fix branches (open)`: only branches with `{n}` = 0. `Held`: step 4.3's epics then items. The runner-slots part appears only when that command printed something.
 
-   **The Milestones block** — one entry per milestone in `milestone_order`; the whole block (header included) is omitted when there are no milestones. A milestone with status `planned` and an empty `in_flight` takes the one-line form `{PREFIX}-MS-{K} {title}  [planned]  epics 0/{n} · items 0/{t}` (`{n}` and `{t}` = the denominators of `epics_delivered` and `items_done`) instead of lines 1–3; its `blocked:` line (line 4) still follows when it has entries. Every other milestone takes the four lines:
+   **The Milestones block** — one entry per milestone in `milestone_order`; the whole block (header included) is omitted when there are no milestones. A milestone with status `planned` and an empty `in_flight` takes the one-line form `{PREFIX}-MS-{K} {title}  [planned]  epics {d}/{n} · items {i}/{t}` (`{n}` and `{t}` = the denominators of `epics_delivered` and `items_done`) instead of lines 1–3; its `blocked:` line (line 4) still follows when it has entries. Every other milestone takes the four lines:
 
    | Line of the template | Built from | Omit |
    |---|---|---|
