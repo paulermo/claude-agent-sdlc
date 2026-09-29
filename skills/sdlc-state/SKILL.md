@@ -565,7 +565,7 @@ Milestone entry (inside `"milestones"`) and its order:
 }
 ```
 
-Ports: allocate `app` starting at 3100, `db` at 5433, incrementing per active worktree (the numbers above are the first worktree's) — collisions break parallel Docker stacks. `stack`: `null` while the holder runs no stack, `"local"` while it runs a stack on this machine, `"runner {NN} slot {x}"` while it holds a runner slot — the PM sets it at dispatch and clears it at release (the stack budget in sdlc-dispatch section 2 counts `"local"` entries).
+Ports: allocate `app` starting at 3100, `db` at 5433, incrementing per active worktree (the numbers above are the first worktree's) — collisions break parallel Docker stacks. `stack`: `null` while the holder runs no stack, `"local"` while it runs a stack on this machine, `"runner {NN} slot {x}"` while it holds a runner slot — the PM sets it at dispatch and clears it at release (the stack budget in sdlc-dispatch section 2 counts `"local"` entries). Exception: a Developer's runner slot stays with the item until its review is verified — the Reviewer re-runs on the story's own slot (runners reference).
 
 `docs/state/project.json` `process` block — how this project runs. **Absent block, absent key → the classic preset value.** `/agent-sdlc:init` writes the fast preset for a new project and the classic preset when it repairs a 1.x project:
 
@@ -628,7 +628,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 ```
 
 - Registering a new item or epic logs `"from": null` (trigger = the registering agent's role). Registering a bug logs `"trigger": "{QA | Deploy | Reviewer | Developer | directive: {filename} | hygiene}"` plus `"origin": "{report path or directive filename}"`.
-- A line's `item` may be an item, an epic, or a milestone ID.
+- A line's `item` may be an item, an epic, or a milestone ID. A milestone transition caused by an epic or item event (its first dispatch, its delivery) carries that event's trigger; one caused by the user carries `decision: user`. A session-wide event (teammates stopped at a usage limit) logs one line per affected item.
 - A recorded deviation from a default (e.g. skipping Designer or the infra phase for an epic) is a **decision line**: `from` and `to` both equal the current status, `"trigger": "decision"`, plus `"note": "{rationale}"`. Extra keys are allowed on any line.
 - **Planning-chain visibility:** planning work changes no statuses, so it is invisible without these two lines. Before dispatching any planning-chain agent (Product Manager, System Analyst, Architect, Designer, Cloud Architect, DevOps Engineer) log a **dispatch line** — `from` == `to` == the epic's current status, `"trigger": "dispatch: {Role}"`, `"note": "{mode/scope, one clause}"`. After verifying its report, log a **completion line** — same shape, `"trigger": "{Role}"`, `"note": "{OUTCOME + one clause}"` — unless the verified report immediately changes a status (then the normal transition line IS the completion record). /status and the tracker read these as the live "who is working now" signal.
 - Bucket moves and archive sweeps are NOT logged — they are consequences of the epic transition, which is.
@@ -658,7 +658,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 | merge queue | `merge queued behind {ITEM-ID}'s` |
 | batches | `batch cut: {item ids} — {reason}` · `batch end: {stage}` · `batch fix skipped: main-in green, no note chosen` · `gate run {N} red: {step}` · `fix loop bound: {one more run | parked}` · `batch {n} delivered; {k} items left` |
 | held | `held: {ID} — {reason}` · `held cleared: {ID} — {answer or directive}` |
-| milestones | `{MS-ID}: {k}/{n} epics delivered` (on the delivery's decision line) · `{MS-ID} delivered` · `recut check failed: {EPIC-ID} gives {k}/{n} stories` |
+| milestones (on the milestone ID) | `{EPIC-ID} done: {d}/{t} epics delivered` · `milestone complete: {t}/{t} epics delivered` · `recut check failed: {EPIC-ID} gives {k}/{n} stories` |
 | main regression | `main regression: {always | if_main_gained_code | never}, {count} code paths — {dispatched | skipped}` (+ `; override: {reason}` when the PM dispatches anyway) |
 | cross-epic | `delivery order: {EPIC-ID} before {EPIC-ID}` · `carries {EPIC-ID} at {sha}` |
 | demo | `demo offered on request ({milestone | epic})` · `demo gate: {answer}` |

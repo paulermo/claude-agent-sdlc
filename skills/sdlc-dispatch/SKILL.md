@@ -134,7 +134,7 @@ TaskStop takes the bare teammate name and stops the session one-sidedly — safe
 |-----------|--------|
 | Report verified, transition committed | teams: release immediately, before narrating and dispatching the next batch · fallback: nothing to do |
 | Report failed verification (envelope/evidence/artifacts missing, report truncated) | do NOT release — message the SAME agent by name (SendMessage resumes a finished agent from its transcript, in both modes) to fix or complete its report; teams: release after acceptance |
-| Work interrupted, not finished (usage-limit reset, dropped connection) | message the SAME agent to continue — the recovery reference has the exact messages |
+| Work interrupted, not finished (usage-limit reset, dropped connection, a BLOCKED report whose blocker is now resolved) | message the SAME agent to continue — the recovery reference has the exact messages |
 | Item rejected later (`review_rejected`, `qa_rejected`) | released stays released — rework is a FRESH dispatch (`{role}-{ITEM-ID}-fix` in the fast lane) with the feedback brief, in both modes |
 
 Shutdown is asynchronous (the teammate finishes its current tool call first) — do not wait for confirmation; continue your loop.
