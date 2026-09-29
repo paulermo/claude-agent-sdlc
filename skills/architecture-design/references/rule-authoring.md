@@ -55,13 +55,13 @@ Naming: lowercase, hyphenated, topic-first — `timestamp-standards.md`, not `fo
 
 ## Before creating a file
 
-`grep -ri "{keyword}" .claude/rules/` — if the topic is covered, update the existing rule. Two rules on one topic make agents pick arbitrarily.
+`grep -ri "{keyword}" {worktree}/.claude/rules/` — if the topic is covered, update the existing rule. Two rules on one topic make agents pick arbitrarily.
 
 ## The two mandatory root rules
 
 **`.claude/rules/architecture.md`** — components + boundaries + allowed-dependency direction + where each kind of code lives. This is the file the Reviewer's Placement lens and the infra agents' designs hang off.
 
-**`.claude/rules/quality-gate.md`** — the project's exact verification commands, in the structure of the seed `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md` (Step 0, the path-to-command table, §Whole-tree checks, §Per story, §Review and merge, §Batch end, §Enforcement). The seed is the one definition of that structure; what Design Mode must fill, the placeholder check and the gate upgrade are in SKILL.md Design Mode step 4.
+**`.claude/rules/quality-gate.md`** — the project's exact verification commands, in the structure of the seed `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md` (§Lanes, §How the full gate runs, Step 0, the path-to-command table, §Whole-tree checks, §Per story, §Review and merge, §Batch end, §Enforcement). The seed is the one definition of that structure; what Design Mode must fill, the placeholder check and the gate upgrade are in SKILL.md Design Mode step 4.
 
 Redundant enforcement is the point: four agents cite ONE definition — update it here and everyone's gate changes together.
 
@@ -71,26 +71,28 @@ Every always-loaded rule is paid for by every agent session before it reads a si
 
 - **Always-loaded** (root-level, no `paths:`) holds only pointers ("API error format: `.claude/rules/api/errors.md`") and the few rules every agent needs in every session — `architecture.md`, `quality-gate.md`, security never-do lines.
 - **Detail** — examples, per-layer conventions, long tables — lives once, in a `paths:`-scoped file whose globs match only the code it governs. A glob matching nearly every file (`**`, `**/*`, `src/**` in a one-module repo) is always-loaded in effect: narrow it.
-- One glob per list line, no `{a,b}` braces — the measuring command below cannot expand them.
+- One glob per list line, no `{a,b}` braces and no inline `paths: [...]` — the measuring command below cannot expand them.
 
-Measure at the end of every Design Mode run and Init Rules Session, and after any change that adds text to an always-loaded file. Run from your worktree root; the sample is a tracked source file in the module a typical story touches (`git ls-files --error-unmatch {path}` exits 0):
+Measure at the end of every Design Mode run and Init Rules Session, and after any change that adds text to an always-loaded file. Run it in your worktree (`cd {worktree} &&` — your shell starts in the main checkout); the sample is a tracked source file in the module a typical story touches (`git -C {worktree} ls-files --error-unmatch {path}` exits 0):
 
 ```bash
-bash -s -- '{sample path}' <<'EOF'
+cd {worktree} && bash -s -- '{sample path}' <<'EOF'
 sample=$1; always=0; scoped=0
 while IFS= read -r f; do
-  size=$(wc -c < "$f")
-  fm=$(awk 'NR==1 && $0!="---" {exit} NR>1 && $0=="---" {exit} NR>1' "$f")
-  if ! printf '%s\n' "$fm" | grep -q '^paths:'; then always=$((always+size)); echo "always  $size $f"; continue; fi
-  if printf '%s\n' "$fm" | sed -n 's/^[[:space:]]*-[[:space:]]*//p' | tr -d "\"'" | while IFS= read -r g; do
-       git ls-files -- ":(glob)$g" | grep -qxF "$sample" && echo hit; done | grep -q hit; then
-    scoped=$((scoped+size)); echo "scoped  $size $f"; fi
+  size=$(wc -c < "$f"); fm=$(awk 'NR==1 && $0!="---" {exit} NR>1 && $0=="---" {exit} NR>1' "$f")
+  if ! printf '%s\n' "$fm" | grep -q '^paths:'; then always=$((always+size)); echo "always      $size $f"; continue; fi
+  printf '%s\n' "$fm" | grep -qE '^paths:[[:space:]]*[^[:space:]]' && echo "check by hand (inline paths:) $f"
+  globs=$(printf '%s\n' "$fm" | sed -n 's/^[[:space:]]*-[[:space:]]*//p' | tr -d "\"'")
+  printf '%s\n' "$globs" | grep -qF '{' && echo "check by hand (brace glob) $f"
+  hit=no
+  while IFS= read -r g; do [ -n "$g" ] && git ls-files -- ":(glob)$g" | grep -qxF "$sample" && hit=yes; done <<< "$globs"
+  if [ "$hit" = yes ]; then scoped=$((scoped+size)); echo "scoped      $size $f"; else echo "not loaded  $size $f"; fi
 done < <(find -L .claude/rules -name '*.md' | sort)
 echo "always-loaded: $always bytes; with $sample: $((always+scoped)) bytes"
 EOF
 ```
 
-The last line is the result (report it as EVIDENCE `rules budget:`); the lines above name each loaded file and its bytes. Keep the always-loaded total under ~60,000 bytes. *Default, not law: deviate only on concrete grounds, and record the rationale in the report's DETAILS.* Over it → move detail out of always-loaded files into `paths:`-scoped ones, leave a pointer, measure again.
+The last line is the result (report it as EVIDENCE `rules budget:`); the lines above name each file, whether it loads for the sample, and its bytes. A `check by hand` line: decide by reading that file's `paths:` whether it loads for the sample, and add its bytes yourself. Keep the always-loaded total under ~60,000 bytes. *Default, not law: deviate only on concrete grounds, and record the rationale in the report's DETAILS.* Over it → move detail out of always-loaded files into `paths:`-scoped ones, leave a pointer, measure again.
 
 ## ADR skeleton (Ruling mode)
 
