@@ -105,16 +105,16 @@ Read the contract first: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/
    ```
    `--expect '{ERE}'` = the counter pattern of the step's `Green means` — required whenever `Green means` names a counter; `--allow-empty` instead only when `Green means` is silence. Call `wait` with the Bash tool timeout at 600000 ms, or add `--timeout 100` at the default tool timeout.
 
-   | `wait` result (its meaning: runners.md) | You do |
+   Record `wait`'s exit on its own line, but decide by the reason in its summary line (`run-step: {step} exit {code} ({reason}); …`), never by the number — a step's own exit code can be 2, 3 or 124 too. The reason → action table is runners.md §5; your QA-specific actions:
+
+   | Summary-line reason (runners.md §5) | You do |
    |---|---|
-   | `0` | green: quote the summary line and the counter |
-   | `124` — still running | `wait` again, same name; never a second `start` while it runs. Still 124 after twice the step's last measured time (the precedent report; none: 2 h — *Default, not law: record a deviation in DETAILS*): check the runner is up; a runner that is down is an outage → BLOCKED |
-   | `2` — a malformed call | fix the call and call again — never red |
-   | `3` — the last start failed, no start recorded, or the result belongs to another start | never read that result; fix the cause, then `start` once more; a second failure → BLOCKED |
-   | `3` — the step died without a result | `start` it again, once; a second death → BLOCKED |
-   | `3` — the transport failed | `wait` again, once; a second transport failure is an outage |
-   | `3` — empty log, or no `--expect` match | red, with two exceptions, each a new `wait` with no new `start`: the step's `Green means` is silence (add `--allow-empty`); the tail shows the counter line your pattern missed (correct `--expect`) |
-   | any other | the step's own exit code: red |
+   | `the step failed` (any exit number) | red: the step's result — stop, report FAILED with the tail and a reproduction |
+   | `passed` | green: quote the summary line and the counter |
+   | `still running` / `transport failing` | `wait` again, same name; never a second `start` while it runs. Still running after twice the step's last measured time (the precedent report; none: 2 h — *Default, not law: record a deviation in DETAILS*): check the runner is up; a runner that is down is an outage → BLOCKED |
+   | `empty log` / `does not match --expect` | red, with two exceptions, each a new `wait` with no new `start`: the step's `Green means` is silence (add `--allow-empty`); the tail shows the counter line your pattern missed (correct `--expect`) |
+   | any other reason (a failed or foreign start, a dead step, unknown state) | follow runners.md §5 for that reason; a second failure of the same kind → BLOCKED |
+   | no summary line, `usage:` on stderr | a malformed call: fix it and call again — never red |
 
    Never read an old log as a pass: only `wait`'s summary line for this start is the step's result — never `cat` or `tail` a step's log on the runner to decide it. WHY: a failed `start` once left the previous run's result in place, and it was read as this run's pass.
 4. At the end, leave the slot as your brief says (stack up or down); never release or reset it — the PM decides. Report slot, tree, stack up or down and free disk under the report's `## State left behind`.
