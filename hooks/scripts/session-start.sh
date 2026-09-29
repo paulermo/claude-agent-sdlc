@@ -14,6 +14,8 @@ NAME=$(jq -r '.name // "unknown"' "$PROJECT_JSON" 2>/dev/null)
 PREFIX=$(jq -r '.prefix // "?"' "$PROJECT_JSON" 2>/dev/null)
 PHASE=$(jq -r '.phase // "unknown"' "$PROJECT_JSON" 2>/dev/null)
 WORKTREES=$(jq -r '.worktrees | length' "$PROJECT_JSON" 2>/dev/null || echo 0)
+# Lane stamped on epics that start from now on; no process block (pre-2.0 project) = classic (sdlc-state section 4, Lanes).
+LANE=$(jq -r '.process.lane // "classic"' "$PROJECT_JSON" 2>/dev/null)
 
 summarize() { # $1 = state file with a flat map of entries having .status (legacy v1 layout)
   [ -f "$1" ] || { echo "none"; return; }
@@ -26,6 +28,8 @@ summarize_kind() { # $1 = stories|content_tasks — across active.json + backlog
 }
 
 EPICS=$([ -f "$STATE_DIR/epics.json" ] && jq -r '.epics | to_entries | map(.value.status) | group_by(.) | map("\(.[0]): \(length)") | join(", ") // "none"' "$STATE_DIR/epics.json" 2>/dev/null || echo "none")
+# Milestone status counts; no milestones map (pre-2.0 epics.json) or an empty one = none.
+MILESTONES=$([ -f "$STATE_DIR/epics.json" ] && jq -r '(.milestones // {}) | to_entries | map(.value.status) | group_by(.) | map("\(.[0]): \(length)") | join(", ")' "$STATE_DIR/epics.json" 2>/dev/null || echo "none")
 if [ -f "$STATE_DIR/active.json" ]; then
   STORIES=$(summarize_kind stories)
   CONTENT=$(summarize_kind content_tasks)
@@ -40,6 +44,8 @@ DIRECTIVES=$(find docs/directives/active -type f 2>/dev/null | wc -l | tr -d ' '
 CONTEXT="## agent-sdlc pipeline state (auto-injected)
 
 Project: ${NAME} (${PREFIX}) | Phase: ${PHASE}
+Lane for new epics: ${LANE:-classic}
+Milestones: ${MILESTONES:-none}
 Epics: ${EPICS:-none}
 Stories: ${STORIES:-none}
 Content tasks: ${CONTENT:-none}
