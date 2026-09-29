@@ -35,6 +35,8 @@ PORT_SPAN = 20
 APP = "agent-sdlc-tracker"
 
 ACTIVE_EPIC_STATUSES = {"in_progress", "ready_for_deploy", "deployed"}
+# An agent is on the item right now (story, bug and content-task machines).
+WORKING_STATUSES = {"in_progress", "creating", "in_review", "in_qa", "integrating"}
 STATE_FILES = ["project.json", "epics.json", "active.json", "backlog.json", "log.jsonl"]
 CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -149,6 +151,50 @@ def epic_progress(epics_doc, active, backlog, archived):
     return prog
 
 
+def milestone_progress(epics_doc, active, backlog, archived):
+    """{ms_id: {epics_total, epics_done, epics_deployed, items_total, items_done,
+    in_flight, planned_items}} (sdlc-state §6 Milestone). Epics come from the
+    milestone's `epics` (live or archived); items are every item of a linked
+    epic plus every uncut-exception item in its `stories`, from any bucket.
+    No milestones (v1, or a pre-2.0 epics.json) → {}."""
+    milestones = epics_doc.get("milestones")
+    if not isinstance(milestones, dict) or not milestones:
+        return {}
+    live_epics = epics_doc.get("epics") or {}
+    items = {}  # id → entry; first bucket wins (active → backlog → archive, as find_entry)
+    for bucket in (active, backlog, archived):
+        for kind in ("stories", "content_tasks"):
+            for item_id, entry in (bucket.get(kind) or {}).items():
+                if isinstance(entry, dict):
+                    items.setdefault(item_id, entry)
+
+    def id_list(value):
+        return list(dict.fromkeys(v for v in value if isinstance(v, str))) if isinstance(value, list) else []
+
+    out = {}
+    for ms_id, ms in milestones.items():
+        if not isinstance(ms, dict):
+            continue
+        epic_ids = id_list(ms.get("epics"))
+        # a done epic lives in the archive; a leftover live copy is a stale duplicate
+        statuses = [((archived["epics"].get(eid) or live_epics.get(eid) or {}).get("status")) for eid in epic_ids]
+        linked = set(epic_ids)
+        member_ids = {iid for iid, e in items.items() if e.get("epic") in linked}
+        member_ids.update(iid for iid in id_list(ms.get("stories")) if iid in items)
+        members = [(iid, items[iid]) for iid in member_ids]
+        planned = ms.get("planned_count")
+        out[ms_id] = {
+            "epics_total": len(epic_ids),
+            "epics_done": statuses.count("done"),
+            "epics_deployed": statuses.count("deployed"),
+            "items_total": len(members),
+            "items_done": sum(1 for _, e in members if e.get("status") == "done"),
+            "in_flight": sorted((iid for iid, e in members if e.get("status") in WORKING_STATUSES), key=id_sort_key),
+            "planned_items": planned.get("items") if isinstance(planned, dict) else None,
+        }
+    return out
+
+
 def compute_stamp(proj):
     sd = state_dir(proj)
     parts = []
@@ -178,6 +224,7 @@ def api_state(proj, given_stamp):
         "backlog": backlog,
         "archived_epics": archived["epics"],
         "epic_progress": epic_progress(epics_doc, active, backlog, archived),
+        "milestone_progress": milestone_progress(epics_doc, active, backlog, archived),
     }
 
 

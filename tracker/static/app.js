@@ -17,10 +17,18 @@
   STAGES.forEach(s => s.statuses.forEach(st => { STATUS_CLS[st] = s.cls; }));
   const EPIC_CLS = { planning: "neutral", ready: "neutral", frozen: "neutral",
     in_progress: "wip", ready_for_deploy: "merge", deployed: "merge", done: "done" };
+  // milestone machine (sdlc-state §4): delivered mirrors an epic's deployed, demoed its done
+  const MS_CLS = { planned: "neutral", in_progress: "wip", delivered: "merge", demoed: "done" };
+
+  // Per-viewer preference; storage can be missing or throw (private window, blocked site data).
+  const PREF_GROUP_MS = "agent-sdlc-tracker:roadmap-group-by-milestone";
+  const loadPref = key => { try { return localStorage.getItem(key) === "1"; } catch (e) { return false; } };
+  const savePref = (key, on) => { try { localStorage.setItem(key, on ? "1" : "0"); } catch (e) { /* ignore */ } };
 
   const S = { project: null, data: null, stamp: null, log: [], archive: null,
     archiveStamp: null, view: "roadmap", itemId: null, docPath: null,
-    item: null, itemStamp: null, ok: false, last: null };
+    item: null, itemStamp: null, ok: false, last: null,
+    groupMs: loadPref(PREF_GROUP_MS), msFocus: null };
 
   const $ = sel => document.querySelector(sel);
   const view = $("#view");
@@ -106,17 +114,57 @@
     document.querySelectorAll("#nav a").forEach(a =>
       a.classList.toggle("on", a.dataset.view === S.view));
     if (!S.data) { view.innerHTML = `<div class="empty">Loading…</div>`; return; }
-    ({ roadmap: renderRoadmap, board: renderBoard, backlog: renderBacklog,
+    ({ roadmap: renderRoadmap, milestones: renderMilestones, board: renderBoard, backlog: renderBacklog,
        activity: renderActivity, archive: renderArchive, item: renderItem }[S.view] || renderRoadmap)();
   }
 
   const v1banner = () => S.data.layout === "v1"
     ? `<div class="banner">Legacy state layout — run <code>/agent-sdlc:init</code> in this project to migrate to state v2.</div>` : "";
 
-  function epicCard(id, e, progress, archived) {
+  // ---------- milestones (sdlc-state §6: epics.json milestones + milestone_order) ----------
+  const milestones = () => (S.data && S.data.epics.milestones) || {};
+  function msOrder() {
+    const all = milestones();
+    const order = (S.data.epics.milestone_order || []).filter(id => all[id]);
+    Object.keys(all).forEach(id => { if (!order.includes(id)) order.push(id); });
+    return order;
+  }
+  const msShort = id => (String(id).match(/MS-\d+$/) || [String(id)])[0];
+  // The epic's own `milestone` field, else the milestone whose `epics` lists it.
+  function epicMilestone(id, e) {
+    const all = milestones();
+    if (e && e.milestone && all[e.milestone]) return e.milestone;
+    return Object.keys(all).find(m => (all[m].epics || []).includes(id)) || null;
+  }
+  // An item's own `milestone` (the uncut exception), else its epic's.
+  function itemMilestone(id, entry) {
+    const all = milestones();
+    if (entry.milestone && all[entry.milestone]) return entry.milestone;
+    const listed = Object.keys(all).find(m => (all[m].stories || []).includes(id));
+    if (listed) return listed;
+    const eid = entry.epic;
+    return eid ? epicMilestone(eid, (S.data.epics.epics || {})[eid] || (S.data.archived_epics || {})[eid]) : null;
+  }
+  const msChip = id => {
+    const m = milestones()[id] || {};
+    return `<span class="chip ms mono" data-ms="${esc(id)}" title="${esc(id)} — ${esc(m.title || "")}">${esc(msShort(id))}</span>`;
+  };
+  // Fast-lane batch end (sdlc-state §4 Epic, `batch.stage`). `gate_run` counts FINISHED runs (sdlc-state §5), so a
+  // gate in progress is run gate_run + 1, and a fix loop repairs the last red run, gate_run.
+  function batchChip(e) {
+    const b = e && e.batch;
+    if (!b || !b.stage) return "";
+    const run = Number(b.gate_run) || 0;
+    const label = b.stage === "gate" ? `gate run ${run + 1}` : b.stage === "fix_loop" ? `fix loop · run ${run} red` : String(b.stage).replace(/_/g, " ");
+    const cls = b.stage === "fix_loop" ? "blocked" : b.stage === "gate" ? "qa" : "merge";
+    return `<span class="chip batch ${cls}" title="batch ${esc(b.n || 1)} · batch-end stage: ${esc(b.stage)}">${esc(label)}</span>`;
+  }
+
+  function epicCard(id, e, progress, archived, opts) {
     const cls = EPIC_CLS[e.status] || "neutral";
+    const ms = opts && opts.noMilestone ? null : epicMilestone(id, e);
     return `<div class="card epic-card clicky" data-item="${esc(id)}">
-      <div class="head">${chip(e.status, cls)}<span class="title">${esc(e.title)}</span></div>
+      <div class="head">${chip(e.status, cls)}<span class="title">${esc(e.title)}</span>${ms ? msChip(ms) : ""}${batchChip(e)}</div>
       ${meter(progress)}
       <div class="sub"><span class="id mono">${esc(id)}</span>
         <span>${e.type === "cepic" ? "content epic" : "epic"}</span>
@@ -129,15 +177,113 @@
     const d = S.data, epics = d.epics.epics || {};
     const order = (d.epics.priority_order || []).filter(id => epics[id]);
     Object.keys(epics).forEach(id => { if (!order.includes(id)) order.push(id); });
-    const live = order.map((id, i) =>
+    const prio = {};
+    order.forEach((id, i) => { prio[id] = i + 1; });
+    const row = id =>
       `<div style="display:flex;gap:10px;align-items:center">
-        <span class="id mono" style="color:var(--muted);width:18px;flex:none">${i + 1}</span>
-        <div style="flex:1">${epicCard(id, epics[id], d.epic_progress[id])}</div></div>`).join("");
+        <span class="id mono" style="color:var(--muted);width:18px;flex:none">${prio[id]}</span>
+        <div style="flex:1">${epicCard(id, epics[id], d.epic_progress[id])}</div></div>`;
+    const hasMs = msOrder().length > 0;
+    const grouped = hasMs && S.groupMs;
+    let live = "";
+    if (grouped) {
+      // One group per milestone that has epics on the roadmap (priority order kept inside), then the rest.
+      const byMs = {};
+      order.forEach(id => { const m = epicMilestone(id, epics[id]) || ""; (byMs[m] = byMs[m] || []).push(id); });
+      const mp = d.milestone_progress || {};
+      live = msOrder().filter(m => byMs[m]).map(m => {
+        const ms = milestones()[m], p = mp[m] || {};
+        return `<div class="ms-group-head" data-ms="${esc(m)}">${msChip(m)}<span class="t">${esc(ms.title || m)}</span>
+            ${chip(ms.status || "planned", MS_CLS[ms.status])}
+            <span class="n">epics ${p.epics_done || 0}/${p.epics_total || 0} · items ${p.items_done || 0}/${p.items_total || 0}</span></div>
+          <div class="epic-list">${byMs[m].map(row).join("")}</div>`;
+      }).join("") + (byMs[""] ? `<div class="ms-group-head plain"><span class="t">No milestone</span></div>
+          <div class="epic-list">${byMs[""].map(row).join("")}</div>` : "");
+    } else live = order.length ? `<div class="epic-list">${order.map(row).join("")}</div>` : "";
+    const toolbar = hasMs ? `<div class="toolbar"><label><input type="checkbox" id="group-ms"${grouped ? " checked" : ""}>
+        Group by milestone</label></div>` : "";
     const arch = Object.entries(d.archived_epics || {});
-    view.innerHTML = v1banner() +
-      (live ? `<div class="epic-list">${live}</div>` : `<div class="empty">No epics yet — the pipeline hasn't planned anything.</div>`) +
+    view.innerHTML = v1banner() + toolbar +
+      (live || `<div class="empty">No epics yet — the pipeline hasn't planned anything.</div>`) +
       (arch.length ? `<details class="archived"><summary>Archived epics (${arch.length})</summary>
         <div class="epic-list">${arch.map(([id, e]) => epicCard(id, e, d.epic_progress[id], true)).join("")}</div></details>` : "");
+  }
+
+  // Any item across active → backlog → archive (the archive only once loaded for this stamp).
+  function findItem(id) {
+    const buckets = [S.data.active, S.data.backlog];
+    if (S.archive && S.archiveStamp === S.stamp) buckets.push(S.archive);
+    for (const b of buckets)
+      for (const kind of ["stories", "content_tasks"])
+        if (b && b[kind] && b[kind][id]) return b[kind][id];
+    return null;
+  }
+
+  async function ensureArchive() {
+    if (S.archiveStamp !== S.stamp) {
+      S.archive = await api("/api/archive", { project: S.project });
+      S.archiveStamp = S.stamp;
+    }
+    return S.archive;
+  }
+
+  function renderMilestones() {
+    const d = S.data, order = msOrder();
+    if (!order.length) {
+      view.innerHTML = v1banner() + `<div class="empty">No milestones yet — the PM defines them in dialogue
+        (or <code>/agent-sdlc:milestone new</code>).</div>`;
+      return;
+    }
+    const all = milestones(), mp = d.milestone_progress || {};
+    const live = d.epics.epics || {}, arch = d.archived_epics || {};
+    let needArchive = false;
+    view.innerHTML = order.map(id => {
+      const m = all[id], p = mp[id] || {};
+      const epicIds = (m.epics || []).filter((x, i, a) => a.indexOf(x) === i);
+      const cards = epicIds.map(eid => {
+        const e = arch[eid] || live[eid];
+        return e ? epicCard(eid, e, d.epic_progress[eid], !!arch[eid], { noMilestone: true })
+          : `<div class="card epic-card"><div class="head">${chip("missing", "blocked")}
+              <span class="title mono">${esc(eid)}</span></div></div>`;
+      }).join("");
+      const stories = (m.stories || []).map(sid => {
+        const en = findItem(sid);
+        if (!en) needArchive = true;
+        return en ? itemRow(sid, en) : `<div class="row" data-item="${esc(sid)}"><span class="id mono">${esc(sid)}</span>
+          <span class="t" style="color:var(--muted)">${S.archiveStamp === S.stamp ? "not found" : "loading…"}</span></div>`;
+      }).join("");
+      const flight = (p.in_flight || []).map(iid => {
+        const en = findItem(iid);
+        return `<span class="chip mono clicky ${STATUS_CLS[en && en.status] || "wip"}" data-item="${esc(iid)}"
+          title="${esc(en ? en.status : "")}">${esc(iid)}</span>`;
+      }).join("");
+      const awaiting = p.epics_deployed ? ` · ${p.epics_deployed} awaiting main regression` : "";
+      const planned = p.planned_items != null ? ` · planned ${esc(p.planned_items)}` : "";
+      return `<div class="ms-group" id="ms-${esc(id)}">
+        <div class="card ms-card">
+          <div class="ms-head"><span class="id mono">${esc(id)}</span><span class="title">${esc(m.title || id)}</span>
+            ${chip(m.status || "planned", MS_CLS[m.status])}
+            <span class="target">${m.target ? "target " + esc(m.target) : "no target date"}</span></div>
+          ${m.goal ? `<div class="goal">${esc(m.goal)}</div>` : ""}
+          <div class="ms-meters">
+            <div><div class="lbl">Epics delivered${esc(awaiting)}</div>${meter({ done: p.epics_done || 0, total: p.epics_total || 0 })}</div>
+            <div><div class="lbl">Items done${planned}</div>${meter({ done: p.items_done || 0, total: p.items_total || 0 })}</div>
+          </div>
+          ${flight ? `<div class="ms-flight"><span>In flight</span>${flight}</div>` : ""}
+        </div>
+        ${cards ? `<div class="epic-list ms-epics">${cards}</div>` : `<div class="ms-none">No epics linked yet.</div>`}
+        ${stories ? `<div class="ms-stories"><div class="lbl">Linked stories (epic not cut whole)</div>
+          <div class="rows">${stories}</div></div>` : ""}
+      </div>`;
+    }).join("");
+    if (S.msFocus) {
+      const el = document.getElementById("ms-" + S.msFocus);
+      if (el) { el.scrollIntoView({ block: "start" }); el.classList.add("focus"); }
+      S.msFocus = null;
+    }
+    // Uncut stories of archived epics are only in the archive — load it once per stamp, then redraw.
+    if (needArchive && S.archiveStamp !== S.stamp)
+      ensureArchive().then(() => { if (S.view === "milestones") renderMilestones(); }).catch(() => {});
   }
 
   function taskCard(id, entry) {
@@ -241,10 +387,8 @@
   }
 
   async function renderArchive() {
-    if (S.archiveStamp !== S.stamp) {
-      try { S.archive = await api("/api/archive", { project: S.project }); S.archiveStamp = S.stamp; }
-      catch (e) { view.innerHTML = `<div class="empty">Archive unavailable.</div>`; return; }
-    }
+    try { await ensureArchive(); }
+    catch (e) { view.innerHTML = `<div class="empty">Archive unavailable.</div>`; return; }
     if (S.view !== "archive") return;
     const groups = groupByEpic(S.archive);
     const ids = Object.keys(groups);
@@ -271,12 +415,16 @@
         <div class="doc">${mdRender(doc.markdown)}</div>`;
       return;
     }
-    const kv = [["epic", e.epic], ["kind", e.kind], ["tier", e.tier],
+    // The milestone: an epic's own; an item's own (uncut exception) or its epic's.
+    const msId = it.kind === "epic" ? epicMilestone(it.id, e) : itemMilestone(it.id, e);
+    const msHtml = msId ? `<a class="ms-link" data-ms="${esc(msId)}">${esc(msId)}</a>
+      <span class="ms-title">${esc((milestones()[msId] || {}).title || "")}</span>` : null;
+    const kv = [["epic", e.epic], ["milestone", msId, msHtml], ["kind", e.kind], ["tier", e.tier],
       ["returns", e.returns != null ? String(e.returns) : null], ["origin", e.origin], ["record", e.record],
       ["branch", e.branch], ["worktree", e.worktree],
       ["assignee", e.assignee], ["bucket", it.bucket], ["type", e.type]]
       .filter(([, v]) => v)
-      .map(([k, v]) => `<dt>${k}</dt><dd class="mono">${esc(v)}</dd>`).join("");
+      .map(([k, v, html]) => `<dt>${k}</dt><dd class="mono">${html || esc(v)}</dd>`).join("");
     // Epic decomposition: its items with statuses, clickable — same shape as the backlog rows.
     const prog = S.data.epic_progress ? S.data.epic_progress[it.id] : null;
     const decomposition = it.kind === "epic" && it.children && it.children.length
@@ -290,7 +438,7 @@
       : "";
     view.innerHTML = `<div class="crumbs"><a href="#/${it.kind === "epic" ? "roadmap" : "board"}">← back</a></div>
       <div class="item-head"><h2>${esc(e.title || it.id)}</h2>${chip(e.status, it.kind === "epic" ? EPIC_CLS[e.status] : undefined)}
-        <span class="chip neutral">${esc(e.kind === "bug" ? "bug" : it.kind)}</span>${e.kind === "bug" ? "" : kindTierChips(e)}</div>
+        <span class="chip neutral">${esc(e.kind === "bug" ? "bug" : it.kind)}</span>${e.kind === "bug" ? "" : kindTierChips(e)}${it.kind === "epic" ? batchChip(e) : ""}</div>
       <div class="id mono" style="color:var(--muted)">${esc(it.id)}</div>
       <dl class="kv">${kv}</dl>
       ${it.related.length ? `<div class="related">${it.related.map(r =>
@@ -301,16 +449,35 @@
   }
 
   // ---------- clicks ----------
+  function openMilestone(id) {
+    S.msFocus = id;
+    if (location.hash === "#/milestones") render();  // same hash fires no hashchange
+    else location.hash = "#/milestones";
+  }
+
   document.addEventListener("click", ev => {
+    // checked first: a milestone chip sits inside a clickable epic card
+    const msEl = ev.target.closest("[data-ms]");
+    if (msEl) { openMilestone(msEl.dataset.ms); return; }
     const itemEl = ev.target.closest("[data-item]");
     if (itemEl) {
       const id = itemEl.dataset.item;
+      if (milestones()[id]) { openMilestone(id); return; }  // log lines may name a milestone
+
       if (S.view === "item" && S.itemId === id && S.docPath) { S.docPath = null; render(); }
       else location.hash = "#/item/" + id;
       return;
     }
     const docEl = ev.target.closest("[data-doc]");
     if (docEl) { S.docPath = docEl.dataset.doc; renderItem(); }
+  });
+
+  document.addEventListener("change", ev => {
+    if (ev.target.id === "group-ms") {
+      S.groupMs = ev.target.checked;
+      savePref(PREF_GROUP_MS, S.groupMs);
+      render();
+    }
   });
 
   // ---------- markdown mini-renderer ----------

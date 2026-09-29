@@ -70,7 +70,7 @@ open "$URL" 2>/dev/null || xdg-open "$URL" 2>/dev/null || true
 Output exactly this shape (fill the placeholders):
 
 > Tracker running: {URL}
-> Views: Roadmap · Board · Backlog · Activity · Archive — click any epic/story/task for its document.
+> Views: Roadmap · Milestones · Board · Backlog · Activity · Archive — click any epic/story/task for its document.
 > Data refreshes every 2s from docs/state/; the page needs no restart when state changes.
 > All registered projects are available in the project switcher (top-left).
 > Stop the server: `curl -X POST http://127.0.0.1:{PORT}/api/shutdown`

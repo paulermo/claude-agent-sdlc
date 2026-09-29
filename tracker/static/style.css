@@ -116,6 +116,15 @@ footer {
 .chip.merge   { --chip: var(--stage-merge); }
 .chip.blocked { --chip: var(--stage-blocked); }
 .chip.done    { --chip: var(--stage-done); }
+/* annotation chips — outlined so they never read as a status: milestone (diamond, ink tokens)
+   and fast-lane batch-end stage (ring in its stage hue) */
+.chip.ms {
+  --chip: var(--ink-2); background: transparent; cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--grid);
+}
+.chip.ms::before { width: 6px; height: 6px; border-radius: 1px; transform: rotate(45deg); }
+.chip.ms:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--muted); }
+.chip.batch { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip) 45%, transparent); }
 
 .meter { display: flex; align-items: center; gap: 8px; }
 .meter .track {
@@ -138,8 +147,38 @@ footer {
 .epic-card .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .epic-card .sub { grid-column: 1 / -1; color: var(--muted); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
 .epic-card .id { color: var(--muted); font-size: 12px; }
+.epic-card .head .chip { flex: none; }
 details.archived { margin-top: 22px; }
 details.archived summary { color: var(--muted); cursor: pointer; font-size: 13px; margin-bottom: 10px; }
+.toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; font-size: 13px; color: var(--ink-2); }
+.toolbar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.toolbar input { accent-color: var(--stage-wip); margin: 0; }
+.ms-group-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 18px 0 8px; font-size: 13px; color: var(--ink-2); cursor: pointer;
+}
+.toolbar + .ms-group-head { margin-top: 0; }
+.ms-group-head .t { font-weight: 600; color: var(--ink); }
+.ms-group-head .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ms-group-head.plain { cursor: default; }
+
+/* ---------- milestones ---------- */
+.ms-group { margin-bottom: 28px; scroll-margin-top: 110px; }
+.ms-group.focus > .ms-card { border-color: var(--stage-wip); }
+.ms-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ms-head .id { color: var(--muted); font-size: 12px; }
+.ms-head .title { font-weight: 650; font-size: 15px; }
+.ms-head .target { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ms-card .goal { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+.ms-meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 28px; margin-top: 12px; }
+.ms-meters .lbl, .ms-stories .lbl { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.ms-flight { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.ms-epics { margin: 10px 0 0 18px; }
+.ms-none { margin: 8px 0 0 18px; color: var(--muted); font-size: 13px; }
+.ms-stories { margin: 12px 0 0 18px; }
+.kv .ms-link { cursor: pointer; text-decoration: underline; text-decoration-color: var(--grid); }
+.kv .ms-link:hover { text-decoration-color: var(--muted); }
+.kv .ms-title { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink-2); margin-left: 6px; }
 
 /* ---------- board ---------- */
 .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(190px, 1fr); gap: 10px; overflow-x: auto; align-items: start; }
