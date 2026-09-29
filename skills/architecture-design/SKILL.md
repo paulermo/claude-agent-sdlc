@@ -113,6 +113,7 @@ FILES:
 - {created/modified} | none (review is read-only)
 BLOCKERS: {none | list}
 DETAILS: {design: key decisions + trade-offs}
+         stories changed: {story IDs whose file you edited (tier, ACs, notes pointers) | none}   [design — the PM dispatches the System Analyst amendment pass for them]
          {review REJECTED: findings — file, what, which rule, fix, critical|suggestion}
          {NEEDS_REQUIREMENTS_FIX: the BRD/story defects, quoted}
          {ruling: the ruling in two sentences · Builds it: {…} · Meanwhile: {…}}

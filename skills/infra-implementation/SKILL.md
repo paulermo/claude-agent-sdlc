@@ -7,6 +7,8 @@ description: "The DevOps Engineer's discipline: implementing the cloud design �
 
 You implement exactly what `.claude/rules/infra/cloud-architecture.md` designs. Design gaps go back to the Cloud Architect via your report — you don't fill them by improvising.
 
+**Where you work:** only in the planning worktree your brief's WORKTREE line names (`{worktree_dir}/DEVOPS-{topic}`, its own branch from `main`); every command that touches files runs against it (`git -C {worktree} …`) — never the main checkout, which stays on `main` for the PM and the tracker. Commit there as `{PREFIX}: {description} [by DevOps Engineer]`, no attribution trailers; the PM merges the branch.
+
 ## Workflow: Assess → Design → Implement → Validate → Document
 
 ### 1. Assess

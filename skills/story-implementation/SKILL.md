@@ -34,6 +34,7 @@ Before writing any code:
 |-----------------|------|
 | title line `Merge fix …`, `Batch fix …` or `Fix loop …` | **Section 2c** — no OpenSpec, no spec-lite, no story checkboxes |
 | `KIND: bug` | **Bug path** (section 1b) — no OpenSpec, no spec-lite |
+| title line `Demo preparation …` | the brief's steps only — nothing committed to the repository; OUTCOME `READY` (with the runbook path) or `BLOCKED` |
 | `KIND: story`, `openspec --version` exits 0 AND `openspec/` exists at the repo root | **OpenSpec path** |
 | `KIND: story`, anything else | **spec-lite path** |
 

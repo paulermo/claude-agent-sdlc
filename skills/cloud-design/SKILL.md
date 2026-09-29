@@ -7,6 +7,8 @@ description: "The Cloud Architect's discipline: designing cloud infrastructure f
 
 You design the cloud infrastructure that the DevOps Engineer will implement. The application architecture (`.claude/rules/architecture.md`) is your input contract — if it has gaps that block infrastructure design, report NEEDS_ARCHITECTURE_FIX rather than inventing application decisions.
 
+**Where you work:** only in the planning worktree your brief's WORKTREE line names (`{worktree_dir}/CLOUD-{topic}`, its own branch from `main`); every command that touches files runs against it (`git -C {worktree} …`) — never the main checkout, which stays on `main` for the PM and the tracker. Commit there as `{PREFIX}: {description} [by Cloud Architect]`, no attribution trailers; the PM merges the branch.
+
 ## Workflow: Discovery → Design → Security → Cost Model → Deployment Strategy → Document
 
 ### 1. Discovery
