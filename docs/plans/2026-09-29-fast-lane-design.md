@@ -92,7 +92,7 @@ batch's members and `gated_sha`; history lives in the log.)
 `deployed → done` by decision line and `deployed → in_progress` after a cut batch; milestone machine
 `planned → in_progress → delivered → demoed`.
 
-**PM-only documents (on `main`):** `docs/reviews/{EPIC-ID}-notes.md`; `docs/reports/{EPIC-ID}-batch-gate[-run{N}|-regate].md`;
+**PM-only documents (on `main`):** `docs/reviews/{EPIC-ID}-notes.md`; `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md`;
 `docs/reports/demo-slice-{N}.md`; `docs/reports/milestone-{N}-recut.md`. Follow-ups stay per epic with project-wide
 `FU-{n}` numbers.
 
@@ -144,7 +144,7 @@ written, then the delivery. Step 6 below is the `books` stage.
 2. **Batch fix (F9)** on `fix/{EPIC}-batch`: meeting defects, notes chosen for the batch, cross-cutting obligations;
    PM diff check + fast-forward. Skipped when the main-in was green and no note was chosen (Default, decision line).
    Rule-gap notes go to an Architect ruling in parallel.
-3. **Full gate (F7):** QA batch-gate mode (runner slot if enabled); report saved as `docs/reports/{EPIC}-batch-gate.md`;
+3. **Full gate (F7):** QA batch-gate mode (runner slot if enabled); every run's report saved as `docs/reports/{EPIC}-batch{n}-gate-run{N}.md`;
    `gated_sha`, `gate_run` recorded.
 4. **Fix loop (F11)** on `fix/{EPIC}-gate-run{N}`: PM diff check + fast-forward, QA re-runs from the failed step. No bug,
    no review. **Addition (not in the spec):** after the 3rd red run, a user gate — "one more run" / "park the epic" —

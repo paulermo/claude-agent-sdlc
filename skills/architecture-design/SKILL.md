@@ -84,8 +84,8 @@ Dispatched at the batch end, in parallel with the batch-fix Developer — same w
 
    | The note | Outcome | PM writes (sdlc-state section 4, Notes) |
    |---|---|---|
-   | a constraint agents decide differently per story, or one a not-yet-built story will hit | ruled: add or sharpen the rule | `→ fixed in the batch ({sha})` |
-   | `rule text`: an existing rule's wording is wrong or ambiguous | ruled: rewrite it in its file | `→ fixed in the batch ({sha})` |
+   | a constraint agents decide differently per story, or one a not-yet-built story will hit | ruled: add or sharpen the rule | `→ ruled ({sha})` |
+   | `rule text`: an existing rule's wording is wrong or ambiguous | ruled: rewrite it in its file | `→ ruled ({sha})` |
    | already stated clearly in a rule file | not a rule: `covered by {file}` | `dropped: covered by {file}` |
    | one instance, no recurring constraint | not a rule: `a defect — follow-up` | `→ FU-{m}` |
    | enforceable by linter/formatter configuration | not a rule: `tooling: {tool}` | `→ FU-{m}` |

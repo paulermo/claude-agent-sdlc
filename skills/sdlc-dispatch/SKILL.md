@@ -100,7 +100,7 @@ After the transition (sdlc-state section 5), mine every report ONCE for the item
 
 | Report content | Lane | You do |
 |----------------|------|--------|
-| Reviewer / QA `REPORT FILE` | both | copy it to `docs/reviews/{ITEM-ID}-{round}.md` (review) or `docs/reports/{EPIC-ID}-batch-gate[-run{N}\|-regate].md` (batch gate); store the review path in `review_feedback`; commit with the state (by path) |
+| Reviewer / QA `REPORT FILE` | both | copy it to `docs/reviews/{ITEM-ID}-{round}.md` (review) or `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md` (batch gate, every run — sdlc-state section 6); store the review path in `review_feedback`; commit with the state (by path) |
 | Reviewer `## Follow-ups` entries (any verdict) | both | append each as one `- [ ] FU-{n} · …` line to `docs/issues/{EPIC-ID}-{slug}/followups.md` (`n` = `counters.followup` + 1; create the file with its heading if missing — format in sdlc-state section 4); commit with the state |
 | Reviewer `## Notes` entries (any verdict) | fast | append each as one `- [ ] N-{n} · {category} · …` line under a heading for the review in `docs/reviews/{EPIC-ID}-notes.md` (`n` = `counters.note` + 1; create from `docs/templates/notes-file-template.md` if missing); commit with the state |
 | Developer `follow-ups closed: FU-…` | both | tick those lines with `— **closed by {ITEM-ID}:** {how}` |
