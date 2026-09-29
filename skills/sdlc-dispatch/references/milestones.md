@@ -19,10 +19,10 @@ Convert a relative date ("end of next week") to `YYYY-MM-DD` and show it in the 
 > **Target:** {YYYY-MM-DD | none}
 > **Epics:** {EPIC-ID title, … | none yet — milestone planning links them (section 3)}
 > **Stories (uncut exception):** {ITEM-IDs | none}
-> {Create | Apply} it? ("yes", "go" or "create" — or tell me what to change)
+> {Create | Apply} it? ("yes", "go", "create" or "apply" — or tell me what to change)
 
 **>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
-Acceptable answers: "yes", "go", "create". Anything else is an edit: apply it to the draft, re-present the FULL entry, gate again. In a new entry `{K}` = `counters.milestone` + 1.
+Acceptable answers: "yes", "go", "create", "apply". Anything else is an edit: apply it to the draft, re-present the FULL entry, gate again. In a new entry `{K}` = `counters.milestone` + 1.
 
 **On acceptance — PM session** (one response, in this order):
 1. New: `counters.milestone` + 1 in `project.json` (add `"milestone": 0` first if it is missing).
