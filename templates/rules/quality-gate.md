@@ -7,14 +7,15 @@ without the full gate, and no story runs the full gate on its own.
 
 > SEEDED PLACEHOLDER — the Architect MUST replace every `{placeholder}` with the project's exact commands during
 > planning. Agents refuse to run while a `{placeholder}` remains. `<angle-bracket>` values are filled at run time by
-> the agent (a branch name, a path) — they are not placeholders.
+> the agent (a branch name, a path) — they are not placeholders. `<main>` = `origin/main` when the repository has a
+> remote, else `main`.
 
 ## Lanes
 
 The lane of an item is its epic's (`skills/sdlc-state` section 4, Lanes). **Classic lane:** every change runs the
-path-to-command table in full, and §Per story, §Review and merge and §Batch end do not apply. **Fast lane:** every
-section applies. A project whose `process.lane` is `classic` and that has no fast-lane epics may delete §Whole-tree
-checks, §Per story, §Review and merge and §Batch end instead of filling them.
+path-to-command table — every section whose glob matches the change, every row of it — and §Per story, §Review and
+merge and §Batch end do not apply. **Fast lane:** every section applies. Fill every section in every project: a
+project may switch its lane later, and a fast epic cannot start while §Per story is missing.
 
 ## How the full gate runs
 
@@ -35,7 +36,8 @@ checks, §Per story, §Review and merge and §Batch end instead of filling them.
 
 ## Path-to-command table (the full gate)
 
-Run Step 0, then every section below whose glob matches `git diff --name-only main...<feature-branch>`, in order.
+Run Step 0, then every section below whose glob matches `git diff --name-only <main>...HEAD` (HEAD = the branch under
+test), in order.
 
 ### `{glob, e.g. src/**}`
 
@@ -97,7 +99,8 @@ belong to the batch-end gate when the host is loaded.
 ## Batch end: the full gate
 
 1. Merge `main` into the feature branch first.
-2. Run the full gate: Step 0, then every section whose glob matches `git diff --name-only main...<feature-branch>`.
+2. Run the full gate: Step 0, then every section whose glob matches `git diff --name-only <main>...HEAD` on the
+   feature branch.
 3. Fix a red step on the feature branch (a fix loop, not a review-and-QA cycle); re-run from the failed step.
 4. Resolve the notes file: each NOTE fixed in the batch, recorded as a follow-up, dropped with a reason, or carried.
 5. One delivery merge to `main`, its commit message carrying: what changed (by behavior area, with IDs); the order of

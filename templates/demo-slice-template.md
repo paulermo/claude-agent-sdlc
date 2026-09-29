@@ -43,7 +43,7 @@ marked **scripted** (done by a helper, not by the application).
 
 ## Build order
 
-| Lane | Items in order | Waits for |
+| Track | Items in order | Waits for |
 |---|---|---|
 | {1} | {ITEM-IDs} | {nothing \| item or ruling} |
 

@@ -9,14 +9,19 @@ reported a pass for a check that never ran — and a gate guard exited 0 while n
 1. **Evidence is a counter, an exit code or a diff** — `412 passed, 0 failed`, `exit 0`, `0 files changed`. Silence is
    not evidence: `ok: true`, empty output and "the run passed" prove nothing until the check is shown to have run.
 2. **A run that selected or evaluated nothing is red** until shown otherwise: a test filter matching 0 tests, a policy
-   script evaluating 0 fixtures, a command that executed 0 runs.
+   script evaluating 0 fixtures, a command that executed 0 runs. WHY: "0 failed" out of 0 run is indistinguishable from
+   a pass in a report.
 3. **Quote the last run that actually passed** — the one on the current tree. Never an earlier run, never a run on
-   another SHA.
+   another SHA. WHY: a fix after the run changes what the run proved.
 4. **Only the gate's own targets are gate evidence** (the commands in `.claude/rules/quality-gate.md`). A direct tool
-   call is a diagnostic — useful, but never a substitute.
-5. **A component "not present yet" is red, not a skip.** If the gate names it, it must run.
+   call is a diagnostic — useful, but never a substitute. WHY: a direct call can skip the config, the cache clear or the
+   selection the gate target applies.
+5. **A component "not present yet" is red, not a skip.** If the gate names it, it must run. WHY: a skipped component
+   ships unproven, and nothing later re-checks it.
 6. **Detached steps** (a long step started on a runner, polled later) are bound to a start token: an empty log with
-   exit 0 is red, and a log from another start is never this run's result. Procedure: `references/runners.md`.
+   exit 0 is red, a log that fails its expected-output check (`--expect`) is red, and a log from another start is never
+   this run's result. Procedure: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/runners.md`. WHY: a failed start
+   once left the previous run's result in place, and it was read as this run's pass.
 7. **Commit trailers are part of the evidence check**: a commit carrying an attribution trailer fails verification
    while `process.commit_attribution` is `false` (sdlc-state section 7).
 
@@ -25,7 +30,8 @@ reported a pass for a check that never ran — and a gate guard exited 0 while n
 1. Read `$?` on the very next line, from the command itself: `cmd; echo "exit=$?"`. Never after a pipe, never after an
    `&&` or `||` list — WHY: after a pipe `$?` is the LAST command's exit (`tail`, `grep`), not the check's.
 2. Send long output to a file and read back `tail -n 30` or a `grep`: `cmd > {reports}/{name}.log 2>&1; echo "exit=$?"`,
-   where `{reports}` is `{worktree_dir}/.reports` from your brief — outside your worktree, so a log is never committed.
+   where `{reports}` is the absolute path your brief names (the main checkout's `{worktree_dir}/.reports`) — outside
+   your worktree, so a log is never committed; never a relative `.reports/`, which would land inside your worktree.
    WHY: printing a whole suite or a generated file floods the context the rest of the work needs.
 3. `grep -c` exits 1 when it counts zero: read the printed count, never the exit status. Count a file that may be
    missing with `cat {file} 2>/dev/null | grep -c '{pattern}'` — WHY: `grep -c … || echo 0` prints `0` twice.

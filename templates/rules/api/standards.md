@@ -60,7 +60,7 @@ GET /resources?limit=20&after=cursor_abc
 Response envelope:
 ```json
 {
-  "data": [...],
+  "data": [{ "id": "…" }],
   "_metadata": {
     "hasMore": true,
     "cursor": "cursor_xyz"

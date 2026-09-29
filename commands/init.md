@@ -30,7 +30,7 @@ Ask via AskUserQuestion, one at a time:
 3. Product description (text, or a file path to read).
 4. Environments (comma-separated, e.g. `dev,staging,prod`).
 5. Lane for new epics: "fast (Recommended) — one targeted proof per story, the full gate once per batch" / "classic — the full gate on every story and merge". Suggest `classic` when the user says the project's full gate runs in under ~2 minutes. Default `fast`. (What a lane is: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-state/SKILL.md` section 4, Lanes.)
-6. Shell the agents run in — default from `basename "$SHELL"`; accept `zsh` or `bash`.
+6. Shell the agents run in — default from `basename "$SHELL"` (anything but `zsh` → `bash`); accept `zsh` or `bash`.
 7. Content guard (optional): "Does the project have a command that scans for banned terms or content (run on every change)?" → its exact command, and whether to install it as a git pre-commit hook; "no" → `null`.
 8. Remote stack runners (optional): "Will tests run on remote runner machines?" → yes sets `integrations.runners.enabled: true` (the runner inventory and tooling dir are filled later by the user; protocol: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/runners.md`).
 
@@ -138,7 +138,7 @@ content/
 
 2.5c. **Repair to v2.0** — run when `project.json` has no `process` key (a project initialized before 2.0). Order is fixed; every edit is additive:
 
-1. Add the **classic preset** `process` block (sdlc-state section 6 — the right column of the preset table; `shell` from `basename "$SHELL"`). With it, every epic behaves exactly as under 1.6.
+1. Add the **classic preset** `process` block — the `classic preset (= absent)` column of the preset table in sdlc-state section 6, written out as JSON; `shell` from `basename "$SHELL"` (anything but `zsh` → `bash`). With it, every epic behaves exactly as under 1.6.
 2. Counters: add `"note": 0`, `"milestone": 0`, and `"followup"` = the highest follow-up number already used in the project, so new `FU-{n}` numbers never collide with per-epic ones:
    ```bash
    cat docs/issues/*/followups.md 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1
@@ -205,7 +205,7 @@ This project is driven by the agent-sdlc pipeline.
 <!-- agent-sdlc:end -->
 ```
 
-2.9. **Commit:** `git add -A docs content .claude .gitignore CLAUDE.md && git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]"` (migration runs: `"{PREFIX}: Migrate SDLC layout [by PM]"`; the state v2 migration from 2.5b commits separately per its step 6).
+2.9. **Commit** (by path — sdlc-state section 1): `git add -A -- docs content .claude .gitignore CLAUDE.md` then `git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]" -- docs content .claude .gitignore CLAUDE.md` (migration runs: `"{PREFIX}: Migrate SDLC layout [by PM]"`; the state v2 migration from 2.5b commits separately per its step 6).
 
 ## Phase 3: Rules session with the Architect (interactive)
 
@@ -226,7 +226,7 @@ This project is driven by the agent-sdlc pipeline.
 > - docs/project.md — product description
 > - docs/state/ — pipeline state (single writer: the PM orchestrator)
 > - .claude/rules/ — project rules, auto-loaded and inherited by every agent; quality-gate.md seeded for the Architect to fill
-> - docs/templates/ — document templates (BRD, UC, epic, story, content)
+> - docs/templates/ — document templates (BRD, UC, epic, story, bug, content, notes file, batch-gate report, delivery commit, demo slice)
 > - CLAUDE.md — SDLC block installed
 > - Hooks active: state-file JSON validation, git discipline guard, attribution guard (set `process.commit_attribution` to `true` in `docs/state/project.json` to turn it off), session state summary
 > - Lane for new epics: {fast | classic} — `process` in `docs/state/project.json` holds every pipeline setting

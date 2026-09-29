@@ -30,6 +30,9 @@ Test plan (full gate at {gated sha} with main merged in, on {runner {NN} slot {x
 - {rows not applicable}: {row}: not applicable ({evidence}); {row}: not matched
 
 <!-- How Deploy fills this (story-merge skill, delivery mode):
+     - First line: `({milestone ID})` when the epic is linked to a milestone; `batch {n}` when the delivered batch is a
+       cut batch (`batch.items` was a list); both apply → `({milestone ID}, batch {n})`; neither → nothing between the
+       epic ID and the dash.
      - What changed: from the batch's story files and bug records (titles + acceptance criteria), grouped by behavior area;
        batch fixes from the notes file lines resolved "→ fixed in the batch".
      - Order / Before merge: from `git diff --name-only origin/main {gated sha}` (migrations, config, infra, secrets names).
