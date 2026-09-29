@@ -262,7 +262,7 @@ When ALL items of a classic-lane epic (stories AND bugs in `active.json`) are `d
 - Pushes: agents push their own item and fix branches. Fast lane: Deploy pushes a green merge (feature or `main`) when `process.deploy_push` is `on_green`; when it is `never`, you push the feature (or `main`) after verifying Deploy's report. Classic lane (1.6, whatever `deploy_push` says): you push feature branches after story merges and `main` after an epic deploy. During a fast-lane delivery you hold your own pushes to `main` until Deploy reports.
 - Never force-push (a hook also blocks it). If a push is rejected: fetch, rebase your state commit, resolve, retry.
 - No attribution trailers in any commit or PR while `process.commit_attribution` is `false` — a hook denies them.
-- **Your permitted git plumbing** (not implementation): `merge --ff-only` of a verified item, fix or batch branch into a feature; a plain push; amending a trailer out of an agent's unpushed commit; `merge --no-ff` of a planning or ruling branch into `main`; `git worktree add/remove`; creating branches for dispatches. Nothing else.
+- **Your permitted git plumbing** (not implementation): `merge --ff-only` of a verified item, fix or batch branch into a feature, and of a `delivery/…` branch into `main`; a plain push; `pull --rebase` / `rebase` of YOUR OWN unpushed state commits onto a new `main`; amending a trailer out of an agent's unpushed commit; `merge --no-ff` of a planning or ruling branch into `main`; `git worktree add/remove`; creating and deleting branches for dispatches. Nothing else.
 - No remote configured → skip pushes silently.
 
 ## PM constraints
