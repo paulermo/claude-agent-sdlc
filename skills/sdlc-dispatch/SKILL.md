@@ -44,7 +44,7 @@ Dispatch by the agent's **registered name** — never by file path — with the 
 
 **Never write briefs freehand.** Copy the matching template from the role's brief file and fill every `{placeholder}`. If a placeholder has no value, write `none` — do not delete the slot (a missing slot reads as "not applicable" to you but as "unknown" to the agent).
 
-**Brief slots and the cap (LAW).** Every template uses the same slots, in this order: `WHY` · `KIND / TIER / ROUND` · `WORKTREE` · `CARRIED IN` · `INPUTS` · `SELECTION / CHECKS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` (a template omits slots that never apply to its role).
+**Brief slots and the cap (LAW).** Every template uses the same slots, in this order: `WHY` · `KIND / TIER / ROUND / LANE` (item briefs; `LANE` = the epic's stamp) · `WORKTREE` · `CARRIED IN` · `INPUTS` · `SELECTION / CHECKS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` (a template omits slots that never apply to its role).
 
 - Free text is allowed in exactly two slots: `WHY` (≤ 2 sentences) and `CARRIED IN` (≤ ~600 characters — facts from sibling items or reviews this item must respect). Every other value is a path, an ID, a SHA, a tier, a number, a command copied from `.claude/rules/quality-gate.md`, or `none`.
 - `{standing lines}` at the end of `DISCIPLINE` = the lines of `process.standing_brief_lines.all` followed by `process.standing_brief_lines["{Role}"]`, one per line (absent: nothing). They do not count toward the cap.
@@ -104,6 +104,7 @@ After the transition (sdlc-state section 5), mine every report ONCE for the item
 | Reviewer `## Follow-ups` entries (any verdict) | both | append each as one `- [ ] FU-{n} · …` line to `docs/issues/{EPIC-ID}-{slug}/followups.md` (`n` = `counters.followup` + 1; create the file with its heading if missing — format in sdlc-state section 4); commit with the state |
 | Reviewer `## Notes` entries (any verdict) | fast | append each as one `- [ ] N-{n} · {category} · …` line under a heading for the review in `docs/reviews/{EPIC-ID}-notes.md` (`n` = `counters.note` + 1; create from `docs/templates/notes-file-template.md` if missing); commit with the state |
 | Developer `follow-ups closed: FU-…` | both | tick those lines with `— **closed by {ITEM-ID}:** {how}` |
+| Developer `REFERENCE CHECK:` lines | both | quote them in the Reviewer brief's `CARRIED IN` (write `none` when there are none); longer than ~600 characters → save them to `{reports}/{ITEM-ID}-reference-checks.md` and `CARRIED IN` names that path |
 | Developer `OUT OF SCOPE` / QA `## Out-of-scope defects`, size small (≤ 5 lines, 1 file) | both | one follow-up line |
 | same, size larger | both | register ONE bug (sdlc-state section 4 — Bug; procedure in start.md) with the report path as `origin`; record from `docs/templates/bug-template.md` |
 | QA regression FAILED (feature branch), Deploy MERGE_FAILED / VERIFICATION_FAILED | classic | register ONE bug from the report (tier = the failed item's tier) |
