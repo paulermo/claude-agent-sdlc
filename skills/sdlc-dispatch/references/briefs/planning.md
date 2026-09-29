@@ -61,7 +61,7 @@ Refine the backlog after completing {EPIC-ID}.
 
 WHY: {EPIC-ID} ({title}) just shipped. Delivered scope may change priorities or reveal new requirements.
 
-MODE: Refinement · live milestone plan: {MS-ID | none}
+MODE: Refinement
 WORKTREE: {worktree_dir}/PRODUCT-{EPIC-ID}-refine, branch product/{EPIC-ID}-refine, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
 CARRIED IN: {user feedback or the Architect's NEEDS_REQUIREMENTS_FIX defects, quoted | none}.
 
@@ -94,7 +94,7 @@ CARRIED IN: the user's words, verbatim — title: {title}; goal / demo: {goal}; 
 
 INPUTS:
 - docs/state/epics.json, backlog.json, active.json (main checkout, READ ONLY — your skill's reads); docs/templates/demo-slice-template.md, epic-template.md; the epic.md and BRD of each candidate epic; docs/project.md.
-- Accepted uncut exceptions: {EPIC-IDs the user accepted uncut | none}.
+- Accepted uncut exceptions: {ITEM-IDs the user accepted uncut — exactly these, never widened | none}.
 - Reserved epic IDs for remainders: {{PREFIX}-EPIC-{c+1} … {PREFIX}-EPIC-{c+n} — milestones reference, section 3, step 1}.
 - System Analyst verdicts and final count: {the SLICED report's verdict and final-count lines — in docs/reports/demo-slice-{K}.md | none yet}.
 - Deferred hardening epic: {EPIC-ID | none}.
@@ -126,7 +126,7 @@ WORKTREE: {worktree_dir}/PRODUCT-{MS-ID}-recut, branch product/{MS-ID}-recut, cu
 
 INPUTS:
 - The milestone part per epic: {docs/reports/demo-slice-{K}.md, `## Placement` | {EPIC-ID}: {ITEM-IDs}; …}.
-- Reserved epic IDs: {{PREFIX}-EPIC-{…} …}. Milestone for the remainders: {NEXT-MS-ID | none}.
+- Reserved epic IDs: {{PREFIX}-EPIC-{…} …}. 
 - Each epic's epic.md and its items (your skill's read of docs/state/backlog.json and active.json, main checkout, READ ONLY); docs/templates/epic-template.md.
 Do NOT read: source code; story files beyond the moved items' `**Epic:**` lines.
 
@@ -168,7 +168,7 @@ DELIVERABLE: use-case files + story files committed (each story with a **Tier:**
 
 VERIFICATION: each story maps to ≥1 use case, has testable acceptance criteria, has a tier, and passes your skill's sizing signals; no `docs/state/` path in your branch's diff; attribution-trailer count 0.
 
-REPORT: the envelope from your skill, OUTCOME: BROKEN_DOWN | NEEDS_PRODUCT_INPUT | BLOCKED, under {cap} characters — registration entries that would pass the cap go to REPORT FILE {reports}/{EPIC-ID}-registration.md, named in the envelope. NEEDS_PRODUCT_INPUT must name the ambiguity — I will re-dispatch Product Manager.
+REPORT: the envelope from your skill, OUTCOME: BROKEN_DOWN | NEEDS_PRODUCT_INPUT | BLOCKED, under {cap} characters — registration entries that would pass the cap go to REPORT FILE {reports}/{EPIC-ID}-registration.json (one JSON object), named in the envelope. NEEDS_PRODUCT_INPUT must name the ambiguity — I will re-dispatch Product Manager.
 ```
 
 ## System Analyst — milestone slice
@@ -182,7 +182,7 @@ MODE: Milestone slice
 WORKTREE: {worktree_dir}/ANALYST-{MS-ID}, branch analyst/{MS-ID}, cut from main at {base sha} — it holds docs/reports/demo-slice-{K}.md: {yes | no}. Write ONLY there; I merge the branch into main.
 CARRIED IN: {the demo steps, when no slice document exists yet | none}.
 
-INPUTS: {docs/reports/demo-slice-{K}.md | the demo steps above}; prerequisites: {prerequisite — consuming {ITEM-ID} ← providing {ITEM-ID}; … | those the slice document lists}; their story files; docs/glossary.md. Placement asked by the Product Manager: {yes | no}.
+INPUTS: {docs/reports/demo-slice-{K}.md | the demo steps above}; prerequisites: {prerequisite — consuming {ITEM-ID} ← providing {ITEM-ID}; … | those the slice document lists}; their story files; docs/glossary.md.
 Do NOT read: other stories.
 
 DISCIPLINE:
