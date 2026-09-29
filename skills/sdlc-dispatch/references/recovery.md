@@ -34,7 +34,7 @@ A BLOCKED report whose blocker you resolved (an answer, a ruling, a prerequisite
 1. The limit stops every teammate at once. Do NOT TaskStop them and dispatch nothing — their sessions hold the work.
 2. For each item whose teammate stopped, append a decision line (`from` = `to` = its status) with the fixed note `teammates stopped: session limit`; commit state by path.
 3. Wait for the reset: the user says so, or your own next turn runs.
-4. Send each stopped teammate the limit-reset message (section 4). Its runner steps are read through their start tokens (`runners.md`) — never an old log as a pass.
+4. Send each stopped teammate the limit-reset message (section 4). Its runner steps are read through their start tokens (`runners.md`) — never an old log as a pass. In that message "interrupted" means `wait` printed `the step died without a result` → `start` again; `still running` → `wait` again (runners.md section 5).
 5. For each item, a decision line `teammates resumed: {role}-{ITEM-ID}`; commit state by path.
 6. A message that fails (`No task found`, the teammate is gone) → section 7 for that item.
 
@@ -68,12 +68,14 @@ A blocker resolved mid-flight:
 
 ## 5. Replacing a thrashing teammate
 
+Only signals the PM can see count — you do not watch panes:
+
 | Signal | Thrashing? |
 |---|---|
-| it says its context is full, or its pane shows a second automatic compaction | yes |
-| it re-reads files it already read, or redoes a step it already reported done, 3 or more times | yes |
-| no new commit in its worktree (`git -C {worktree} log -1 --format=%cr`) for more than ~60 minutes while it keeps working | yes |
-| it is waiting on a long runner step (`run-step wait` exit 124) | no — waiting is not thrashing |
+| the teammate's own message says it ran out of context: an automatic compaction, `prompt is too long`, or "my context is full" | yes |
+| the user reports it (a pane looping, re-reading the same files) | yes |
+| no new commit in its worktree (`git -C {worktree} log -1 --format=%cr`) for more than ~60 minutes while it is still working | yes |
+| it is waiting on a long runner step (its last message names a `run-step wait` that printed `still running`) | no — waiting is not thrashing |
 
 *Default, not law: deviate only on concrete grounds, and record the rationale in the dispatch line's note.*
 

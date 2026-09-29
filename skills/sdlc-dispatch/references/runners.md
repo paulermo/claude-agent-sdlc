@@ -8,17 +8,17 @@ Legend: `{NN}` = the runner's number in the inventory (with the reference script
 
 ## 1. Identical runners (LAW)
 
-1. One idempotent provisioner sets up every runner, with pinned tool versions, and ends by printing a fingerprint of what it installed.
-2. A check re-runs the provisioner on every runner and diffs the fingerprints; it exits 1 on any drift. A drifted runner gets no dispatch until it is re-provisioned and the check exits 0.
+1. One idempotent provisioner sets up every runner, with pinned tool versions, and ends by printing a fingerprint of what it installed — WHY: runners that differ in one tool version give different results for the same commit; the fingerprint makes "identical" a checkable fact.
+2. A check re-runs the provisioner on every runner and diffs the fingerprints; it exits 1 on any drift. A drifted runner gets no dispatch until it is re-provisioned and the check exits 0 — WHY: a drifted runner's red or green belongs to the runner, not to the commit.
 3. Runners are never configured by hand, and are added one at a time — WHY: two concurrent adds once corrupted the shared SSH configuration.
 4. Calibrate every new or re-provisioned runner before its first real step: run a known gate run there and compare the counts (the same test count, the same result). Different → the runner is not used.
 
 ## 2. No secrets on a runner (LAW)
 
-1. A runner holds a bare repository that the local machine pushes to. It holds no source-host credential and never fetches from the source host.
-2. Each stack's secrets are generated on the runner by the stack's own `up`, into an ignored env file; they never travel.
-3. Only SSH comes in; every stack port is bound to the runner's localhost.
-4. Reference material (anything the project keeps out of its repository or marks as reference) never goes to a runner.
+1. A runner holds a bare repository that the local machine pushes to. It holds no source-host credential and never fetches from the source host — WHY: a runner is a rented machine outside the project's trust boundary; without a credential, a compromised runner cannot reach the source.
+2. Each stack's secrets are generated on the runner by the stack's own `up`, into an ignored env file; they never travel — WHY: a secret that never travels cannot leak in transit or from a copy.
+3. Only SSH comes in; every stack port is bound to the runner's localhost — WHY: an open stack port exposes a test system and its generated secrets to anyone.
+4. Reference material (anything the project keeps out of its repository or marks as reference) never goes to a runner — WHY: it is licensed or confidential, and a runner is not an approved place to hold it.
 
 ## 3. Slots
 
@@ -45,27 +45,30 @@ run-step wait  {NN} {x} {name} [--expect {ERE}] [--allow-empty] [--timeout {secs
 
 - `start` runs `{command}` detached in the slot's work tree: the command travels as a file (no nested quoting); output goes to `{name}.log`; `{name}.done` = `{exit} {secs} {token}` is published when the step ends. `wait` polls until a result, the timeout, or a refusal.
 - **Every call** sets `RUN_STEP_STATE={reports}/run-step` — WHY: an agent's working directory resets between tool calls, and a cwd-relative state dir makes `wait` exit 3 (no start recorded) and dirties a work tree.
-- `{name}` is a `[a-z0-9-]` slug, unique per run: `{step}-r{N}` for gate run `{N}`.
+- `{name}` is a lower-case `[a-z0-9-]` slug, unique per run: IDs lower-cased (`tst-story-3-tests`); `{step}-r{N}` for gate run `{N}`.
 - One `wait` fits one Bash tool call: with the default `--timeout 540`, call the Bash tool with `timeout: 600000`; at the tool's default 120000 ms, pass `--timeout 100`. Set `ConnectTimeout 10`, `ServerAliveInterval 15` and `ServerAliveCountMax 3` for each runner in `~/.ssh/config` — a hung ssh blocks `wait` past its timeout.
-- Read `wait`'s exit code on its own line: `run-step wait … ; echo "exit=$?"` (evidence-and-shell.md). Only `wait`'s summary line for THIS start decides the step — never `cat` or `tail` a step's log on the runner to judge it.
+- Record `wait`'s exit code on its own line (`run-step wait … ; echo "exit=$?"`, evidence-and-shell.md), but **decide by the reason in its summary line, never by the number** — `run-step: {name} exit {code} ({reason}); {secs}s; log {bytes} bytes` — because a step's own exit code can be 2, 3 or 124 too (`make` exits 2 on a failure). Only that summary line for THIS start decides the step — never `cat` or `tail` a step's log on the runner to judge it.
 
-| `wait` exit | When | The agent does |
+| `{reason}` (exact text) | Exit | The agent does |
 |---|---|---|
-| the step's own code | the step finished with it | the step's result: red; quote the tail |
-| `0` | the step exited 0, its log is non-empty (or `--allow-empty`) and matches `--expect` (when given) | green: quote the summary line and the counter |
-| `3` | the last `start` failed (the `.pending` marker is present), or no `start` is recorded in this state dir | fix the cause, then `start` again |
-| `3` | the runner's token differs from the local one: the result belongs to another start | never read that log; `start` again |
-| `3` | the step exited 0 with an empty log (no `--allow-empty`), or the log does not match `--expect` | red — the output proves nothing. Two exceptions, each a new `wait` and never a new `start`: the step's green is silence (add `--allow-empty`); the tail shows the counter line your pattern missed (correct `--expect`) |
-| `3` | the step died without a result (its process is gone, no `done`) | `start` again, once; a second death → BLOCKED |
-| `3` | the first read of the runner failed: the state is unknown | fix the transport, then `wait` again; a second failure is an outage → BLOCKED |
-| `124` | still running after `--timeout`, or the transport kept failing after the first read | `wait` again, same name — never a second `start` while it runs. Still 124 after twice the step's last measured time (*Default, not law: record a deviation in DETAILS*): check the runner is up; a runner that is down is an outage → BLOCKED |
-| `2` | usage error | fix the call — never red, never a result |
+| `the step failed` | the step's own code — any number, 2, 3 and 124 included | red: the step's result; quote the tail |
+| `passed` | `0` | green — it exited 0, its log is non-empty (or `--allow-empty`) and matches `--expect`: quote the summary line and the counter |
+| `exit 0 with an empty log; --allow-empty only if silence is this step's green` · `exit 0 but the log does not match --expect` | `3` | red — the output proves nothing. Two exceptions, each a new `wait`, never a new `start`: the step's green is silence (add `--allow-empty`); the tail shows the counter line your pattern missed (correct `--expect`) |
+| `no start recorded here; start first` · `the local token is empty; start again` | `3` | check `RUN_STEP_STATE` first — it must be the `{reports}/run-step` the `start` call used: wrong → `wait` again with it; right → `start` again |
+| `the last start failed; start again` | `3` | read the failed `start`'s error, fix the cause, `start` again |
+| `the runner's token differs: the result belongs to another start` | `3` | never read that log; `start` again |
+| `the step died without a result; start it again` · `unreadable done file: '{…}'` | `3` | `start` again, once; a second time → BLOCKED |
+| `could not read the step on {host} (transport exit {n}); state unknown, wait again once the transport works` | `3` | fix the transport, then `wait` again; a second failure is an outage → BLOCKED |
+| `still running; call wait again` · `transport failing (exit {n}); call wait again` | `124` | `wait` again, same name — never a second `start` while it runs; `transport failing` twice in a row is an outage → BLOCKED. Still running after twice the step's last measured time (no earlier measurement: 2 h — *Default, not law: record a deviation in DETAILS*): check the runner is up; a runner that is down is an outage → BLOCKED |
+| no summary line; stderr starts `usage: run-step.sh` | `2` | a usage error: fix the call — never red, never a result |
+
+`start` succeeds only with exit 0 and `run-step: {name} started on {host} slot {x} (token {token})`. Anything else — `start of {name} on {host} slot {x} failed (transport exit {n}); wait refuses until a start succeeds`, `cannot create …`, `cannot write …`, a usage error — → fix the cause and `start` once more; a second failure → BLOCKED.
 
 **Start tokens (LAW).** `start` first removes the local token and raises a local `.pending` marker; it writes a fresh token beside the step's files on the runner; only after the launch succeeded does it write the same token locally and drop the marker. A launch publishes its `done` only while the runner's token is still its own, and each `done` carries that token. `wait` accepts a result only when the local token, the runner's token and the `done` token are one. WHY: a failed `start` once left the previous run's `done` in place, and `wait` read its old exit 0 as this run's pass.
 
 - `--expect {ERE}`: give it the counter line of every step that prints one (the test runner's summary), so a step that ran nothing is red.
 - `--allow-empty`: only for a step whose green is silence — a breaking-change check, a drift check.
-- EVIDENCE line: `- runner {NN} slot {x} {name}: wait exit {code} (token {token from start}); {counter line} ({secs}s)`.
+- EVIDENCE line: `- runner {NN} slot {x} {name}: {wait's summary line} (token {token from start}); {counter line}`.
 
 ## 6. Syncing a local worktree — `runner-sync {NN} {x} {worktree} [--pull {paths}]`
 
@@ -82,7 +85,7 @@ A service that bind-mounts a single file keeps the old file after a sync (a new 
 1. **Allocate** at dispatch, in the same response as the working status: a slot is free when no worktree entry's `stack` names it — `jq -r '.worktrees[] | .stack // empty' docs/state/project.json` lists the held ones. Set the holder's worktree entry `"stack": "runner {NN} slot {x}"` (sdlc-state section 6); the brief's STACK slot names it with the SHA; the dispatch line's note names it (sdlc-state section 7).
 2. **Release** when the holder's report is verified: set `"stack": null`. Exception: a Developer's slot stays with the item for its Reviewer — the review re-runs on the story's own slot — and is cleared at the Reviewer's release.
 3. **Reset** before a slot's next holder is dispatched — the PM does it (slot plumbing, like `git worktree add`); holders never reset a slot: (1) `down` with volumes in the slot (the project's down target); (2) `RESET=1 runner-slot {NN} {x} {the next holder's sha}`; both exit 0, else the slot is not used and you narrate why.
-4. **Stale** — a `stack` held by an item no longer in a working or hand-off status: start.md Step 2.5 clears it with the decision line `stack released: {holder} {slot} (stale)`; step 3 runs before its next holder.
+4. **Stale** — an item holds its slot only while it is in a working status (sdlc-state section 1) or `ready_for_review` (a Developer's slot waiting for its Reviewer); an `{EPIC-ID}-merge` worktree holds a stack only while Deploy or QA runs there (while Deploy runs, its `stack` is `"local"` and counts against the budget). Any other holder is stale: start.md Step 2.5 clears it with the decision line `stack released: {holder} {slot} (stale)`; step 3 runs before its next holder.
 
 ## 8. Use order and the stack budget
 

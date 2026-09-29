@@ -16,22 +16,12 @@ run-step.sh wait  {host} {slot} {name} [--expect {ERE}] [--allow-empty] [--timeo
 - `wait` prints one line, `run-step: {name} exit {code} ({reason}); {secs}s; log {bytes} bytes`, then the log's last
   20 lines (only when the log is this start's). Read the exit code on its own line. `wait` never changes state.
 
-## Exit codes (`wait`)
+## Exit codes and what to do
 
-| Exit | When |
-|---|---|
-| the step's own code | the step finished with it |
-| 0 | the step exited 0, its log is non-empty (or `--allow-empty`) and matches `--expect` (when given) |
-| 3 | the last `start` failed (the `.pending` marker is present), or no `start` was recorded in this state dir |
-| 3 | the runner's token differs from the local one: the result belongs to another start |
-| 3 | the step exited 0 with an empty log, without `--allow-empty` (for steps whose green is silence) |
-| 3 | the step exited 0 but the log does not match `--expect {ERE}` |
-| 3 | the step died without a result (its process is gone, no `done`): `start` it again |
-| 3 | the first read of the runner failed: the state is unknown; fix the transport, then `wait` again |
-| 124 | still running after `--timeout` (default 540 s), or the transport kept failing after the first read: `wait` again |
-| 2 | usage error (both commands) |
-
-`start` exits 0 once the step is launched, otherwise with the transport's code (the `.pending` marker stays).
+The `wait` table — every reason text, its exit code and what the agent does — has one home:
+`skills/sdlc-dispatch/references/runners.md` §5. Decide by the reason in the summary line, never by the number: a
+step's own exit code can be 2, 3 or 124 too. `start` exits 0 once the step is launched, otherwise with the transport's
+code (the `.pending` marker stays); a usage error exits 2 with no summary line.
 
 **Why the tokens and markers:** a failed `start` once left the previous run's `.done` in place, and `wait` read its old
 exit 0 as this run's pass. So `start` raises a local `.pending` marker and writes the local token only after the
