@@ -20,7 +20,7 @@ openspec --version 2>/dev/null
 - Not installed → inform (don't block): "OpenSpec not installed. The Developer will use the built-in spec-lite workflow. For OpenSpec: `npm install -g @fission-ai/openspec@latest`."
 - Installed but `openspec/` missing → `openspec init --tools claude`.
 
-0.3. **Existing installation check:** if `docs/state/project.json` exists, this is a MIGRATION run — skip Phase 1 questions (keep existing config), run Phases 2-4 only for the pieces that are missing or legacy (they are all idempotent).
+0.3. **Existing installation check:** if `docs/state/project.json` exists, this is a MIGRATION run — skip Phase 1 questions (keep existing config), run Phases 2-4 only for the pieces that are missing or legacy (they are all idempotent). A project without a `process` key in `project.json` also gets the v2.0 repair (2.5c).
 
 ## Phase 1: Project configuration (new installs only)
 
@@ -29,6 +29,10 @@ Ask via AskUserQuestion, one at a time:
 2. Project name.
 3. Product description (text, or a file path to read).
 4. Environments (comma-separated, e.g. `dev,staging,prod`).
+5. Lane for new epics: "fast (Recommended) — one targeted proof per story, the full gate once per batch" / "classic — the full gate on every story and merge". Suggest `classic` when the user says the project's full gate runs in under ~2 minutes. Default `fast`. (What a lane is: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-state/SKILL.md` section 4, Lanes.)
+6. Shell the agents run in — default from `basename "$SHELL"`; accept `zsh` or `bash`.
+7. Content guard (optional): "Does the project have a command that scans for banned terms or content (run on every change)?" → its exact command, and whether to install it as a git pre-commit hook; "no" → `null`.
+8. Remote stack runners (optional): "Will tests run on remote runner machines?" → yes sets `integrations.runners.enabled: true` (the runner inventory and tooling dir are filled later by the user; protocol: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/runners.md`).
 
 ## Phase 2: Structure & state
 
@@ -46,7 +50,7 @@ content/
 .claude/rules/                     ← project rules (auto-loaded by Claude Code, inherited by agents)
 ```
 
-2.2. **Copy document templates** from the plugin: `${CLAUDE_PLUGIN_ROOT}/templates/*.md` → `docs/templates/` (brd, epic, story, use-case, bug, content-plan, content-task). Do not overwrite existing files (migration runs add the missing ones — notably `bug-template.md`).
+2.2. **Copy document templates** from the plugin: `${CLAUDE_PLUGIN_ROOT}/templates/*.md` → `docs/templates/` (brd, epic, story, use-case, bug, content-plan, content-task, notes-file, batch-gate-report, delivery-commit, demo-slice). Do not overwrite existing files (migration runs add the missing ones — notably `bug-template.md` and the four 2.0 templates).
 
 2.3. **Seed base rules** from `${CLAUDE_PLUGIN_ROOT}/templates/rules/` → `.claude/rules/`, preserving subdirectories (`api/`, `backend/`, `frontend/`, `infra/`, `cross-cutting/`, `authoring/`, `product/`, and root files). Do not overwrite existing files. These are strong generic defaults — **the Architect customizes them for the stack during planning** (that is a pipeline step, not an init step).
 
@@ -66,10 +70,29 @@ content/
   "phase": "not_started",
   "_note_phase": "Cached pipeline phase: not_started | planning | implementation | done. Recomputed by start/status; agent registry 'stage' labels below are a different, informational grouping.",
   "max_parallel_teammates": 4,
-  "_note_parallelism": "Target 3-5 parallel agents when independent items allow; this is the cap.",
+  "_note_parallelism": "Target 3-5 parallel agents when independent items allow; this is the cap on WORKING teammates — user-adjustable. Local Docker stacks have their own cap: process.max_local_stacks.",
   "worktree_dir": ".worktrees",
   "worktrees": {},
-  "counters": { "brd": 0, "uc": 0, "epic": 0, "story": 0, "bug": 0, "cp": 0, "cepic": 0, "ctask": 0 },
+  "counters": { "brd": 0, "uc": 0, "epic": 0, "story": 0, "bug": 0, "note": 0, "followup": 0, "milestone": 0, "cp": 0, "cepic": 0, "ctask": 0 },
+  "process": {
+    "lane": "{fast | classic — answer 5}",
+    "main_regression": "if_main_gained_code",
+    "docs_only_paths": ["docs/", ".claude/"],
+    "followups_gate": "triage",
+    "demo_gate": "on_request",
+    "planning_depth": "just_in_time",
+    "deploy_push": "on_green",
+    "deploy_exclusivity": "per_target_branch",
+    "max_local_stacks": 2,
+    "report_max_chars": 3500,
+    "commit_attribution": false,
+    "attribution_patterns": ["co-authored-by", "generated with", "🤖", "claude-session"],
+    "commit_conventions": null,
+    "shell": "{zsh | bash — answer 6}",
+    "models": { "default": "inherit" },
+    "standing_brief_lines": { "all": [] },
+    "content_guard": null
+  },
   "agents": {
     "pm":                 { "file": "pm.md",                 "stage": "all",            "type": "lead" },
     "product":            { "file": "product.md",            "stage": "planning",       "type": "subagent" },
@@ -86,12 +109,14 @@ content/
     "content-reviewer":   { "file": "content-reviewer.md",   "stage": "content",        "type": "teammate" },
     "content-integrator": { "file": "content-integrator.md", "stage": "content",        "type": "teammate" }
   },
-  "integrations": { "notifications": null, "issue_tracker": null, "ci_cd": null }
+  "integrations": { "notifications": null, "issue_tracker": null, "ci_cd": null, "runners": { "enabled": false, "tooling_dir": null, "inventory": null } }
 }
 ```
-(Migration runs: merge missing agent entries into the existing registry — notably `deploy` —, add missing counters — notably `"bug": 0` —, and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched. Item entries need no migration for v1.6: absent `kind` / `tier` / `returns` read as `story` / `standard` / `0` per sdlc-state.)
+(The `process` block above is the **fast preset** of sdlc-state section 6 — keep every value except `lane` and `shell`, which come from answers 5 and 6. If the user chose `classic` in answer 5, set `lane` to `classic` and keep the rest: the other keys are independent of the lane. `content_guard` from answer 7: `{"command": "{cmd}", "pre_commit": true | false}` or `null`. `integrations.runners.enabled` from answer 8.)
 
-`docs/state/epics.json`: `{ "priority_order": [], "epics": {} }` · `active.json`: `{ "stories": {}, "content_tasks": {} }` · `backlog.json`: `{ "stories": {}, "content_tasks": {} }` · `log.jsonl`: empty file (`touch`) · `.secrets.json`: `{}`
+(Migration runs: merge missing agent entries into the existing registry — notably `deploy` —, add missing counters — notably `"bug": 0` —, and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched. Item entries need no migration: absent `kind` / `tier` / `returns` read as `story` / `standard` / `0` per sdlc-state. The `process` block and the 2.0 counters are added by 2.5c, never by this template.)
+
+`docs/state/epics.json`: `{ "priority_order": [], "epics": {}, "milestones": {}, "milestone_order": [] }` · `active.json`: `{ "stories": {}, "content_tasks": {} }` · `backlog.json`: `{ "stories": {}, "content_tasks": {} }` · `log.jsonl`: empty file (`touch`) · `.secrets.json`: `{}`
 `docs/state/environments.json` from the user's list: `{ "environments": { "{env}": { "url": null, "configured": false } } }`
 (Environments are managed by `/agent-sdlc:env`; QA uses a configured env's URL for E2E against deployed targets.)
 
@@ -111,6 +136,26 @@ content/
 5. Delete `docs/state/stories.json` and `docs/state/content-tasks.json`; set `"state_version": 2` in `project.json`.
 6. Verify: every ID from the legacy files appears in exactly one v2 file (`jq` count comparison); only then commit — `{PREFIX}: Migrate state to sharded layout (state v2) [by PM]`.
 
+2.5c. **Repair to v2.0** — run when `project.json` has no `process` key (a project initialized before 2.0). Order is fixed; every edit is additive:
+
+1. Add the **classic preset** `process` block (sdlc-state section 6 — the right column of the preset table; `shell` from `basename "$SHELL"`). With it, every epic behaves exactly as under 1.6.
+2. Counters: add `"note": 0`, `"milestone": 0`, and `"followup"` = the highest follow-up number already used in the project, so new `FU-{n}` numbers never collide with per-epic ones:
+   ```bash
+   cat docs/issues/*/followups.md 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1
+   ```
+   Empty output → `0`.
+3. `integrations.runners`: add `{"enabled": false, "tooling_dir": null, "inventory": null}` if missing.
+4. `epics.json`: add `"milestones": {}` and `"milestone_order": []` if missing. Epic entries are NOT touched — an epic without a `lane` stamp is `classic` (sdlc-state section 4, Lanes).
+5. Verify every file you edited parses (`jq empty docs/state/project.json docs/state/epics.json`), then ask once:
+
+   > ## agent-sdlc 2.0 — lanes
+   > This project now runs on the **classic lane** — exactly the 1.6 pipeline. The **fast lane** proves each story with a targeted set of checks and one review round, and runs the full gate once per batch (usually an epic) before delivering to `main`. Epics already in flight always finish on classic.
+   > Switch NEW epics to the fast lane? ("fast" / "classic")
+
+   **>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
+   Acceptable answers: "fast", "classic". Anything else is a question — answer it and gate again. On "fast": set `process.lane` to `fast` and tell the user that the project's `.claude/rules/quality-gate.md` needs the fast-lane sections (§Whole-tree checks, §Per story, §Review and merge, §Batch end — see `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`) before the first fast epic starts; `/agent-sdlc:start` dispatches the Architect for that automatically. The other keys of the classic preset stay — the user may change any of them in `project.json` later.
+6. Commit: `git add -- docs/state && git commit -m "{PREFIX}: Repair state for agent-sdlc 2.0 [by PM]" -- docs/state`.
+
 2.6. **Verify the quality gate seed** — after step 2.3, confirm `.claude/rules/quality-gate.md` exists (it ships in the base rules as a placeholder table the Architect fills during planning). If it is missing, copy it explicitly from `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`.
 
 2.7. **`.gitignore`** — append if missing:
@@ -118,6 +163,20 @@ content/
 docs/state/.secrets.json
 .worktrees/
 ```
+
+2.7b. **Attribution settings** — when `process.commit_attribution` is `false` (the default): merge into the project's `.claude/settings.json` (create it with `{}` if absent; never overwrite other keys):
+```json
+{ "attribution": { "commit": "", "pr": "" } }
+```
+Empty strings turn off Claude Code's own commit trailer and PR attribution line (`includeCoAuthoredBy` is the deprecated spelling — do not add it). This is the first line of defence; the plugin's `guard-commit.sh` hook denies any trailer that still appears, and the PM's verification checks agent commits (sdlc-dispatch section 3).
+
+2.7c. **Content-guard pre-commit hook** — only when `process.content_guard.pre_commit` is `true`: if `.git/hooks/pre-commit` does not exist, write it and `chmod +x` it:
+```bash
+#!/bin/sh
+# agent-sdlc: run the project's content guard on every commit (process.content_guard)
+{content_guard.command}
+```
+If a pre-commit hook already exists, do NOT overwrite it — show the user the one line to add to it. Worktrees share `.git/hooks`, so every agent's commits run it too.
 
 2.8. **CLAUDE.md managed block** — create `CLAUDE.md` if absent; then insert or replace the block between the markers (idempotent — replace existing block content on re-run):
 
@@ -134,10 +193,15 @@ This project is driven by the agent-sdlc pipeline.
 - **Rules** in `.claude/rules/` are law for all code work; `quality-gate.md` defines
   the exact verification commands every agent runs.
 - **The orchestrator never writes code** — every change goes through the owning agent
-  (Developer/Content roles), then Reviewer, then QA, then Deploy.
+  (Developer/Content roles). Fast lane: then one Reviewer round, then Deploy; the full
+  gate runs once per batch before delivery to `main`. Classic lane: then Reviewer, then
+  QA, then Deploy.
+- **No attribution trailers** in commits or PRs — a hook denies them while
+  `process.commit_attribution` is `false` in `docs/state/project.json`.
 - **Documents**: templates in `docs/templates/`, requirements in `docs/requirements/`,
   epics/stories/bugs/follow-ups in `docs/issues/`, reviews in `docs/reviews/`, QA reports in `docs/reports/`.
-- `/agent-sdlc:status` — where things stand; `/agent-sdlc:start` — continue the pipeline.
+- `/agent-sdlc:status` — where things stand; `/agent-sdlc:start` — continue the pipeline;
+  `/agent-sdlc:milestone` — define or list milestones (writes a directive, never state).
 <!-- agent-sdlc:end -->
 ```
 
@@ -147,7 +211,7 @@ This project is driven by the agent-sdlc pipeline.
 
 3.1. Ask via AskUserQuestion: "Configure the project rules now, together with the Architect (recommended), or skip — the Architect will then customize them autonomously during planning?" Options: "Configure now (Recommended)" / "Skip".
 
-3.2. If **Configure now**: dispatch `agent-sdlc:Architect` as a FOREGROUND subagent (the user talks to it directly) with the "Architect — Init Rules Session" brief from `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/briefs.md`. The Architect follows its skill's Init Rules Session procedure: present the full picture (stack, rule customizations, quality-gate commands, open questions) → "What would you adjust?" gate → apply agreed changes → commit. Verify its report (RULES_CONFIGURED) and that the commit exists.
+3.2. If **Configure now**: dispatch `agent-sdlc:Architect` as a FOREGROUND subagent (the user talks to it directly) with the "Architect — Init Rules Session" brief from `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/briefs/planning.md`. The Architect follows its skill's Init Rules Session procedure: present the full picture (stack, rule customizations, quality-gate commands, open questions) → "What would you adjust?" gate → apply agreed changes → commit. Verify its report (RULES_CONFIGURED) and that the commit exists.
 
 3.3. If **Skip**: note it for the summary — rules stay as seeded; the Architect customizes them in Design Mode during planning.
 
@@ -164,7 +228,8 @@ This project is driven by the agent-sdlc pipeline.
 > - .claude/rules/ — project rules, auto-loaded and inherited by every agent; quality-gate.md seeded for the Architect to fill
 > - docs/templates/ — document templates (BRD, UC, epic, story, content)
 > - CLAUDE.md — SDLC block installed
-> - Hooks active: state-file JSON validation, git discipline guard, session state summary
+> - Hooks active: state-file JSON validation, git discipline guard, attribution guard (set `process.commit_attribution` to `true` in `docs/state/project.json` to turn it off), session state summary
+> - Lane for new epics: {fast | classic} — `process` in `docs/state/project.json` holds every pipeline setting
 >
 > 14 agents registered. Rules: {configured with you in the Architect session | seeded — the Architect will customize them during planning}.
 > Next: `/agent-sdlc:start` to begin (planning runs Product Manager → System Analyst → Architect).
