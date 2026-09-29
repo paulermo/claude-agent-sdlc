@@ -105,7 +105,7 @@ For each file in `docs/directives/active/` (sorted by filename):
      reproduction: …
      expected: …
      ```
-   - Unpark (`unpark-{ITEM-ID}.md`, or any directive naming a parked item) → apply what it says: "one more round" (decision line `budget gate: one more round`; the item is dispatchable once, then the returns rule runs again) or "accept" (open findings → followups.md as FU lines; the item advances to the status the verdict would have granted; decision line `budget gate: accepted — findings to follow-ups`).
+   - Unpark (`unpark-{ITEM-ID}.md`, or any directive naming a parked item) → delete the item's `parked` key, then apply what it says: "one more round" (decision line `budget gate: one more round`; the item is dispatchable once, then the returns rule runs again) or "accept" (open findings → followups.md as FU lines; the item advances to the status the verdict would have granted; decision line `budget gate: accepted — findings to follow-ups`).
    - Unhold (`unhold-{ID}.md`, or any directive naming a `held` epic or item) → remove `held`, decision line `held cleared: {ID} — {directive}`, then apply what it says.
    - Milestone (`{date}-milestone-{slug}.md`) → the milestones reference, "the directive path".
 2. Move the file to `docs/directives/archive/`.
@@ -210,7 +210,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 > Options: "one more round" (one extra Developer + verdict cycle — fast lane: one more fix pass checked by its diff — then this gate again) · "accept" (open findings become follow-ups, the item advances) · "park" (the item waits for a directive).
 
 **>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
-Acceptable answers: "one more round" / "round", "accept", "park". Anything else is feedback — treat it as a directive (Step 2 rules), apply it, re-present the picture, and gate again. Record the answer as a decision line (fixed notes in sdlc-state section 7).
+Acceptable answers: "one more round" / "round", "accept", "park" — "one more round" and "accept" delete the item's `parked` key; "park" keeps it. Anything else is feedback — treat it as a directive (Step 2 rules), apply it, re-present the picture, and gate again. Record the answer as a decision line (fixed notes in sdlc-state section 7).
 
 ### Merge flow: story → feature branch
 
@@ -239,7 +239,7 @@ When ALL items of a classic-lane epic (stories AND bugs in `active.json`) are `d
 
    > ## Epic Complete: {EPIC-ID} — {title}
    > **Stories completed:** {list}
-   > **Bugs fixed:** {list | none} · **Parked:** {items with returns ≥ budget | none}
+   > **Bugs fixed:** {list | none} · **Parked:** {items with `"parked": true` | none}
    > **What was delivered:** {summary from story reports}
    > **Next epic:** {next by priority}
    > Ready to proceed? ("go" to continue, or give feedback)

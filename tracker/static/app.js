@@ -315,9 +315,11 @@
   function kindTierChips(entry) {
     const isBug = entry.kind === "bug" || entry.item_kind === "bug";
     const tier = entry.tier || "standard";
-    const budget = isBug ? 1 : (BUDGET[tier] || 2);
+    // Budgets per sdlc-state §4: fast lane = 1 at every tier; classic = by tier (bugs 1). Parked is an explicit field.
+    const epic = ((S.data && S.data.epics && S.data.epics.epics) || {})[entry.epic] || {};
+    const budget = epic.lane === "fast" || isBug ? 1 : (BUDGET[tier] || 2);
     const returns = Number(entry.returns) || 0;
-    const parked = returns >= budget && ["review_rejected", "qa_rejected"].includes(entry.status);
+    const parked = entry.parked === true;
     const out = [];
     if (isBug) out.push(`<span class="chip blocked">bug</span>`);
     if (tier !== "standard") out.push(`<span class="chip neutral">${esc(tier)}</span>`);

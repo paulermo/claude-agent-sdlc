@@ -138,7 +138,6 @@ The command reads the archive, so it is for `/agent-sdlc:status` and the tracker
 ```bash
 { cat docs/state/epics.json docs/state/active.json docs/state/backlog.json
   find docs/state/archive -name 'done-*.json' -exec cat {} + 2>/dev/null; } | jq -s --arg ms '{MS-ID}' '
-def budget($lane): if $lane == "fast" or .kind == "bug" then 1 else ({"light": 1, "critical": 3}[.tier // "standard"] // 2) end;
 .[0] as $ix | $ix.milestones[$ms] as $m | $m.epics as $L
 | (([.[1:][] | .epics // {} | to_entries[]] | from_entries) + $ix.epics) as $E
 | [.[1:][] | (.stories // {}), (.content_tasks // {}) | to_entries[] | .value + {id: .key}] | unique_by(.id)
@@ -149,7 +148,7 @@ def budget($lane): if $lane == "fast" or .kind == "bug" then 1 else ({"light": 1
     drift: (if $m.planned_count then ($I | length) - $m.planned_count.items else "no plan" end),
     in_flight: ([$I[] | select(.status | IN("in_progress", "creating", "in_review", "in_qa", "integrating")) | "\(.id) \(.status)"]
       + [$L[] | select($E[.].batch.stage) | "\(.) batch \($E[.].batch.stage)"]),
-    blocked: ([$I[] | select((.status | IN("review_rejected", "qa_rejected")) and (.returns // 0) >= budget($E[.epic].lane)) | "\(.id) parked"]
+    blocked: ([$I[] | select(.parked == true) | "\(.id) parked"]
       + [$L[] | select($E[.].batch.stage == "fix_loop") | "\(.) red gate run \($E[.].batch.gate_run)"]
       + [$L[] | select($E[.].status == "frozen") | "\(.) frozen"]
       + [$L[] as $e | ($E[$e].delivers_after // [])[] as $d

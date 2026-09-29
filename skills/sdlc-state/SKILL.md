@@ -268,11 +268,11 @@ Triage — *Default, not law: deviate only on concrete grounds, and record the r
 | `returns` before the report | PM does |
 |-----------------------------|---------|
 | `< budget(tier)` | save the feedback file, set `review_rejected` / `qa_rejected`, `returns` + 1, re-dispatch a fresh Developer (or content agent) when capacity allows |
-| `== budget(tier)` | set the rejected status, do NOT increment, do NOT re-dispatch — the item is **parked**: decision line `"note": "budget exhausted ({returns}/{budget}): parked"`; interactive sessions run the budget gate (start.md), `--no-human` parks silently and narrates |
+| `== budget(tier)` | set the rejected status, do NOT increment, set `"parked": true`, do NOT re-dispatch — the item is **parked**: decision line `"note": "budget exhausted ({returns}/{budget}): parked"`; interactive sessions run the budget gate (start.md), `--no-human` parks silently and narrates |
 
-**Fast lane:** the budget is 1 at every tier, so the first REJECTED sends the item to its one fix pass. A fix pass is verified by the PM's diff check instead of a second review: if the check finds a blocking finding still open, apply the `== budget` row (status `review_rejected`, parked, budget gate). "One more round" in the fast lane = one more fix pass, verified the same way.
+**Fast lane:** the budget is 1 at every tier, so the first REJECTED sends the item to its one fix pass. A fix pass is verified by the PM's diff check instead of a second review: if the check finds a blocking finding still open, apply the `== budget` row (status `review_rejected`, `"parked": true`, budget gate). "One more round" in the fast lane = one more fix pass, verified the same way.
 
-Parked = a rejected status with `returns >= budget(tier)`. A parked item is not dispatchable — the dispatch map skips it. It leaves parking only through the budget gate ("one more round" — one extra Developer + verdict cycle, after which this rule runs again; "accept" — the open findings move to followups.md and the item advances to the status the verdict would have granted) or a directive (rollback). WHY: unbounded rounds were the single largest cost in CBS epic 1 — 27 of 50 dispatches were returns, and a README took seven.
+**Parked = the entry carries `"parked": true`** — never a formula: an item at `returns == budget` in a rejected status is still owed its last rework until a report parks it (with a budget of 1, the first REJECTED leaves `returns: 1` and the item is NOT parked). A parked item is not dispatchable — the dispatch map skips it. It leaves parking only through the budget gate — every answer deletes the `parked` key: "one more round" (one extra Developer + verdict cycle, after which this rule runs again), "accept" (the open findings move to followups.md and the item advances to the status the verdict would have granted) — or a directive (unpark, rollback), which deletes it the same way. WHY a field: a formula cannot tell "owed its last rework" from "exhausted" — both have `returns == budget` and a rejected status. WHY: unbounded rounds were the single largest cost in CBS epic 1 — 27 of 50 dispatches were returns, and a README took seven.
 
 ### Content task
 
@@ -357,7 +357,7 @@ planned → in_progress → delivered → demoed
 | both | in_progress | Developer IMPLEMENTED — story, or bug of tier standard/critical; fast lane: only when `returns == 0` | ready_for_review | tick `FOLLOW-UPS CLOSED` lines; route `OUT OF SCOPE` lines (follow-up or bug, section 4) |
 | both | in_progress | Developer IMPLEMENTED — bug of tier light | ready_for_merge | decision line `"review skipped: light bug"` |
 | fast | in_progress | Developer IMPLEMENTED — fix pass (`returns == 1`), and the PM's diff check finds every named finding closed | ready_for_merge | decision line `"fix pass verified by the PM reading {a}..{b} against {finding ids}"` |
-| fast | in_progress | Developer IMPLEMENTED — fix pass, and the diff check finds a named finding still open | review_rejected (parked) | decision line `"budget exhausted (1/1): parked"`; budget gate |
+| fast | in_progress | Developer IMPLEMENTED — fix pass, and the diff check finds a named finding still open | review_rejected, `"parked": true` | decision line `"budget exhausted (1/1): parked"`; budget gate |
 | both | ready_for_review | PM dispatches Reviewer | in_review | brief carries ROUND = returns + 1 (fast lane: always 1) |
 | classic | in_review | Reviewer APPROVED — story, or bug of tier critical | ready_for_qa | append the review's `## Follow-ups` to followups.md |
 | classic | in_review | Reviewer APPROVED — bug of tier standard | ready_for_merge | same |
@@ -430,7 +430,7 @@ Story entry (inside `"stories"`):
 }
 ```
 
-There is NO `history` field — transitions go to `log.jsonl` (section 7). `kind` / `tier` / `returns` are defined in section 4 (Kinds, tiers, budgets); absent = `story` / `standard` / `0`. An item carries `"milestone": "{PREFIX}-MS-{n}"` ONLY when it is listed in a milestone's `stories` (the uncut exception) — otherwise its milestone is its epic's.
+There is NO `history` field — transitions go to `log.jsonl` (section 7). `kind` / `tier` / `returns` are defined in section 4 (Kinds, tiers, budgets); absent = `story` / `standard` / `0`. An item carries `"milestone": "{PREFIX}-MS-{n}"` ONLY when it is listed in a milestone's `stories` (the uncut exception) — otherwise its milestone is its epic's. `"parked": true` appears only while the item is parked (section 4, Return budget and parking); `"held": "{reason}"` only while it is held (section 4, Epic).
 
 Bug entry (same map `"stories"`, so every reader of the map sees it):
 

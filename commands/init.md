@@ -146,6 +146,7 @@ content/
    Empty output → `0`.
 3. `integrations.runners`: add `{"enabled": false, "tooling_dir": null, "inventory": null}` if missing.
 4. `epics.json`: add `"milestones": {}` and `"milestone_order": []` if missing. Epic entries are NOT touched — an epic without a `lane` stamp is `classic` (sdlc-state section 4, Lanes).
+4b. Parked items: 1.x marked parking by a formula; 2.0 needs the explicit field (sdlc-state section 4). For every entry in `active.json` / `backlog.json` `stories` with status `review_rejected` or `qa_rejected` and `returns` ≥ its 1.x budget (bugs 1; light 1, standard 2, critical 3 — absent tier = standard), add `"parked": true` — conservative: the budget gate's "one more round" frees one that was only owed its last rework. List them in the repair summary.
 5. Verify every file you edited parses (`jq empty docs/state/project.json docs/state/epics.json`), then ask once:
 
    > ## agent-sdlc 2.0 — lanes
