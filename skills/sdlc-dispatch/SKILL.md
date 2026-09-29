@@ -44,7 +44,7 @@ Dispatch by the agent's **registered name** — never by file path — with the 
 
 **Never write briefs freehand.** Copy the matching template from the role's brief file and fill every `{placeholder}`. If a placeholder has no value, write `none` — do not delete the slot (a missing slot reads as "not applicable" to you but as "unknown" to the agent).
 
-**Brief slots and the cap (LAW).** Every template uses the same slots, in this order: `WHY` · `KIND / TIER / ROUND / LANE` (item briefs; `LANE` = the epic's stamp) · `WORKTREE` · `CARRIED IN` · `INPUTS` · `SELECTION / CHECKS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` (a template omits slots that never apply to its role).
+**Brief slots and the cap (LAW).** Every template uses the same slots, in this order: `WHY` · `KIND / TIER / ROUND / LANE` (item briefs; `LANE` = the epic's stamp) · `WORKTREE` (followed by a `REPORTS: {reports}` line — the absolute reports directory, sdlc-state section 1) · `CARRIED IN` · `INPUTS` · `SELECTION / CHECKS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` (a template omits slots that never apply to its role).
 
 - Free text is allowed in exactly two slots: `WHY` (≤ 2 sentences) and `CARRIED IN` (≤ ~600 characters — facts from sibling items or reviews this item must respect). Every other value is a path, an ID, a SHA, a tier, a number, a command copied from `.claude/rules/quality-gate.md`, or `none`.
 - `{standing lines}` at the end of `DISCIPLINE` = the lines of `process.standing_brief_lines.all` followed by `process.standing_brief_lines["{Role}"]`, one per line (absent: nothing). They do not count toward the cap.
