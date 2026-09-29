@@ -93,7 +93,7 @@ cmd_start() {
   local remote="cd $QROOT && S=\"\$(pwd)\"/.steps/$QSLOT && cd $QSLOT && mkdir -p \"\$S\""
   remote="$remote && cat > \"\$S\"/$QNAME.cmd.tmp && mv \"\$S\"/$QNAME.cmd.tmp \"\$S\"/$QNAME.cmd"
   remote="$remote && printf '%s\\n' $(q "$token") > \"\$S\"/$QNAME.token"
-  remote="$remote && rm -f \"\$S\"/$QNAME.done \"\$S\"/$QNAME.done.* \"\$S\"/$QNAME.log \"\$S\"/$QNAME.pid"
+  remote="$remote && rm -f \"\$S\"/$QNAME.done \"\$S\"/$QNAME.done.[0-9]*-* \"\$S\"/$QNAME.log \"\$S\"/$QNAME.pid"
   remote="$remote && { nohup bash -c $(q "$WRAPPER") run-step \"\$S\"/$QNAME $(q "$token") > /dev/null 2>&1 < /dev/null &"
   remote="$remote echo \$! > \"\$S\"/$QNAME.pid; }"
 
