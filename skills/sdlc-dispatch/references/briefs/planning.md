@@ -13,7 +13,7 @@ Copy the template for the dispatch, fill every `{placeholder}`, and send the res
 | System Analyst — amendment pass | both | the Architect's Design Mode report lists stories its design changed |
 | System Analyst — one story from a ruling | both | a ruling's "Builds it" says `needs a new story` — ID reserved first (rulings reference, New scope) |
 | Architect — Design Mode | both | an epic's design during planning; a slice's `## Design owed` |
-| Architect — Design Mode, gate upgrade | fast | the project switches `process.lane` to `fast` and `.claude/rules/quality-gate.md` has no §Per story |
+| Architect — Design Mode, gate upgrade | fast | the project switches `process.lane` to `fast` and `.claude/rules/quality-gate.md` lacks any of §Whole-tree checks, §Per story, §Review and merge, §Batch end (start.md epic start counts them) |
 | Architect — Init Rules Session (interactive, dispatched from /agent-sdlc:init) | — | /agent-sdlc:init, Phase 3 |
 | Architect — Review Mode | both | Cloud Architect / DevOps Engineer output to gate |
 | Architect — ruling (F8) | both | a trigger of the rulings reference's When table |
@@ -294,7 +294,7 @@ REPORT: the envelope from your skill, OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX
 ```text
 Upgrade .claude/rules/quality-gate.md for the fast lane: add and fill §Whole-tree checks, §Per story and the other fast-lane sections.
 
-WHY: The project switches process.lane to fast; a fast epic cannot start while quality-gate.md has no §Per story.
+WHY: The project switches process.lane to fast; a fast epic cannot start while quality-gate.md lacks its fast-lane sections.
 
 MODE: Design Mode — gate upgrade{ (with {EPIC-ID}'s design) | (no epic)}
 WORKTREE: {worktree_dir}/ARCHITECT-gate-upgrade, branch architect/gate-upgrade, cut from main at {base sha}. Write ONLY there; I merge the branch into main.

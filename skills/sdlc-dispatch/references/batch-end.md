@@ -103,7 +103,7 @@ git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only
 ## 4. Full gate — stage `gate`
 
 1. Stack: no selected gate section needs a stack (quality-gate.md's precondition is `none`) → `"none"`; otherwise `integrations.runners.enabled` is true and a slot is free (runners reference) → `"runner {NN} slot {x}"`; else room in the local budget (sdlc-dispatch §2) → `"local"`; else queue, narrate, dispatch stackless work meanwhile. Set it on the `{EPIC-ID}-merge` worktree entry.
-2. `{head}` = `git -C {merge} rev-parse HEAD`. Dispatch QA — `briefs/qa.md` "QA — batch gate (F7)" at `{head}`, REPORT FILE `{reports}/{EPIC-ID}-batch{n}-gate-run{gate_run + 1}.md`; after a fix loop the brief names the failed step to re-run from. Teammate `qa-{EPIC-ID}-run{gate_run + 1}`; model key `QA:batch_gate`; dispatch line `dispatch: QA (full gate)`.
+2. `{head}` = `git -C {merge} rev-parse HEAD`. Dispatch QA — `briefs/qa.md` "QA — batch gate (F7)" at `{head}`, REPORT FILE `{reports}/{EPIC-ID}-batch{n}-gate-run{gate_run + 1}.md`; after a fix loop the brief names the failed step to re-run from. Teammate `qa-{EPIC-ID}-run{gate_run + 1}`; model key `QA:batch_gate`; dispatch line `dispatch: QA (full gate)`. A re-run's report states, for every step it did not re-run, the run and SHA that step passed on; the delivery's test plan quotes the steps exactly so — never as if every step ran on `gated_sha`.
 3. Verify (sdlc-dispatch §3) plus: the report's run SHA equals `{head}` — a run on another SHA is not this run. Clear `stack`.
 4. PASSED or FAILED → `gate_run` + 1 (= `{N}`); copy the report file to `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md` — every run, PASSED or FAILED (sdlc-state §6):
 

@@ -11,6 +11,7 @@ Runs in the PM session (`/agent-sdlc:start`) and in `/agent-sdlc:milestone new |
 1. `What should the milestone be called? A short name.`
 2. `What is its goal, or the demo you want to see? One or two sentences.`
 3. `Is there a target date? A date (YYYY-MM-DD) or "none".`
+4. `Is any of it already delivered? Name the epics, "all of it", or "none".` — "all of it" → after acceptance the milestone goes `planned → delivered` on the user's word with no epics (sdlc-state section 5) and no planning runs; named epics are delivered work the slice document records as "already on `main`" (never linked — archived epics are not linked).
 
 Convert a relative date ("end of next week") to `YYYY-MM-DD` and show it in the entry. **Edit:** ask one question — `What should change for {MS-ID}: the title, the goal, the target, or the linked epics / stories?` — and apply the answer to a draft. Then present the FULL entry (never a delta):
 
