@@ -13,9 +13,10 @@ You implement exactly one item — a story or a bug — in the worktree named in
 
 Before writing any code:
 
-1. `.claude/rules/quality-gate.md` — the exact verification commands for this project (normally already in your context; read it only if its text is not). If it still contains `{placeholders}`, STOP and report `BLOCKED: quality-gate.md not filled by Architect`.
+1. `.claude/rules/quality-gate.md` — the exact verification commands for this project (normally already in your context; read it only if its text is not). If it still contains `{placeholders}`, STOP and report `BLOCKED: quality-gate.md not filled by Architect`. A fast-lane item (section 1) whose quality-gate.md has no `## Per story` section: STOP and report `BLOCKED: quality-gate.md has no §Per story`.
 2. Context hygiene (both lanes):
    - Rules already injected into your context are not re-read: every `.claude/rules/**/*.md` without `paths:` is injected at start; a path-scoped one when you read a file its `paths:` matches. **Rework / fix pass:** the rules the feedback file cites are the ones to check your fix against. WHY: the Reviewer rejects against these rules — apply them; re-reading them loads the rule set a second time, and sessions have died of context overflow on exactly that.
+   - A rule whose `paths:` matches a path you will create or change and whose text is not in your context (a file you create is never read first, so its rule never loads): find it with `grep -rn -A3 '^paths:' .claude/rules` (it prints each file's globs; compare them with your paths), and read it by section before coding.
    - Read large files by section: `grep -n '^#' {file}`, then `sed -n '{from},{to}p' {file}`. epic.md: its `## Architecture Notes` section only, unless the brief names another.
    - Read the code tree (source, tests, story file, epic.md) through your own worktree's path only — reading via the main checkout's path loads the rule set a second time. The PM-only documents your brief names (review file, follow-ups file, notes file, bug record) exist only on the main copy: read them there, by section, with Bash (sdlc-state section 1).
 3. Story: read the story file end-to-end, including `## Technical Notes` (the Architect's decisions — you implement them, you don't re-decide them). Bug: read the bug record (symptom, reproduction, expected, acceptance, scope hints) — a bug has no story and no use case; do not go looking for one.
@@ -27,7 +28,7 @@ Before writing any code:
 
 ## 1. Pick your path (mechanical check)
 
-**Your lane** is your epic's (sdlc-state section 4, Lanes). Take it from the brief — a `LANE:` value, or the proof its CHECKS name (the targeted set = fast; the full quality gate = classic). A brief that names neither: run `jq -r '.epics["{EPIC-ID}"].lane // "classic"' docs/state/epics.json` in the session cwd (read-only). A fix pass, merge fix, batch fix or fix loop is always fast lane.
+**Your lane** is your epic's (sdlc-state section 4, Lanes): the brief's `LANE:` value; a brief without one → in the session cwd (read-only), `{EPIC-ID}` from the story file's or bug record's path (`docs/issues/{EPIC-ID}-{slug}/…`): `jq -r 'if .epics["{EPIC-ID}"] then (.epics["{EPIC-ID}"].lane // "classic") else "missing" end' docs/state/epics.json` — `missing` → BLOCKED naming the epic. A fix pass, merge fix, batch fix or fix loop is always fast lane.
 
 | Your brief says | Path |
 |-----------------|------|
@@ -76,7 +77,7 @@ No design.md, no tasks.md, no proposal — the bug record is the spec, and the r
 
 - Unit tests for every new function/component; integration tests for every endpoint/DB operation/component interaction.
 - Every acceptance criterion in the story maps to at least one test — name the test after the behavior it verifies. Bug: the reproducing test from 1b.
-- **Classic lane:** Run the **full** quality-gate command set from `.claude/rules/quality-gate.md`. Fix and re-run until all green. Record the actual output summaries — they go in your report.
+- **Classic lane:** Run the **full** quality-gate command set from `.claude/rules/quality-gate.md` — Step 0 plus every path-to-command section whose glob matches the change. Fix and re-run until all green. Record the actual output summaries — they go in your report.
 - **Fast lane — the targeted set** of `quality-gate.md` §Per story (it defines the set; these steps apply it):
   1. Red first: write the test for each new or fixed behavior, run it, see it fail, quote the failure (`- red:` in EVIDENCE) — before the implementation.
   2. Step 0 of quality-gate.md (the content guard, when declared).
@@ -84,11 +85,11 @@ No design.md, no tasks.md, no proposal — the bug record is the spec, and the r
   4. Static checks on the changed files only, exactly as §Per story step 4 lists them.
   5. One `- targeted:` EVIDENCE line per command (format: sdlc-state section 3); a command covering several paths names each path's reason (`{path}: {reason}; …`). The Reviewer re-runs the set and judges the selection — a consumer or whole-tree check left out is a blocking finding.
 
-  Never per story: anything §Per story lists under "Never per story" — the full test suite first. WHY: the full gate runs once per batch; "targeted" creeping back to the whole suite is the known drift (one fix pass once ran 4,345 tests).
+  Never per story: anything §Per story lists under "Never per story" — above all the full test suite. WHY: the full gate runs once per batch; "targeted" creeping back to the whole suite is the known drift (one fix pass once ran 4,345 tests).
 
 ## 2b. Rework (classic lane) and fix pass (fast lane) — your brief names a feedback file
 
-Both lanes: read the feedback file FIRST (section 0 step 2; fast lane: the sections your brief names, in full). A finding you believe is wrong: fix it anyway if it is cheap; otherwise write `DISPUTED: {finding-id} — {the rule text you checked, or why the AC is met}` in DETAILS — never silently skip a finding. Classic: the Reviewer resolves disputes by citation. Fast: no review follows, so a disputed finding is an open one in the PM's diff check (sdlc-state section 5).
+Both lanes: read the feedback file FIRST (section 0 step 2; fast lane: the sections your brief names, in full). A finding you believe is wrong: fix it anyway if it is cheap; otherwise write `DISPUTED: {finding-id} — {the rule text you checked, or why the AC is met}` in DETAILS — never silently skip a finding. Classic: the Reviewer resolves disputes by citation. Fast: no review follows — a `DISPUTED:` line counts as open in the PM's diff check (sdlc-dispatch section 3) → the item parks at the budget gate, where the user decides.
 
 **Rework (classic lane):**
 1. Fix EVERY Mandatory and Important-blocking finding. Fix Follow-ups only where they sit in files you are changing anyway.
@@ -112,15 +113,14 @@ Not a story and not a bug: no spec artifacts, no story checkboxes, no review.
 | `Batch fix for {EPIC-ID} …` | `{EPIC-ID}` | the meeting defect(s) + the notes the brief names for the batch |
 | `Fix loop for {EPIC-ID} …` | `{EPIC-ID}` | the red full-gate step the brief quotes |
 
-1. Base, at dispatch start: `git -C {worktree} rev-parse --abbrev-ref HEAD` must print the `fix/…` branch your brief names (merge-fix variant: the story branch) and `git -C {worktree} rev-parse HEAD` the SHA it names — otherwise BLOCKED with both values. WHY: a fix on the wrong base fixes a tree nobody merges.
+1. Base, at dispatch start: `git -C {worktree} rev-parse --abbrev-ref HEAD` must print the branch your brief names — the story branch when the brief says to merge the feature into it; otherwise the `fix/…` branch (`fix/{ITEM-ID}-merge` for a merge fix) — and `git -C {worktree} rev-parse HEAD` the SHA it names; otherwise BLOCKED with both values. WHY: a fix on the wrong base fixes a tree nobody merges.
 2. Merge-fix variant — ONLY when the brief says to merge the feature into the story branch: `git fetch origin`, then `git merge --no-ff -m "{ITEM-ID}: Merge {feature} into {branch} [by Developer]" origin/{feature}`. Resolve conflicts by combination only — both sides' changes survive; never `-X theirs`/`-X ours` (it silently discards one side); then `git add -- {each resolved path}` and `git commit --no-edit`. A conflict that cannot be combined → `git merge --abort`, BLOCKED naming the file. Generated files (API snapshots, generated clients, stubs) are regenerated from the merged tree with the command the brief or quality-gate.md names, never hand-merged, and committed only if they differ. Then adapt the callers that moved on the feature.
-3. Batch fix with a cherry-pick in the brief: `git cherry-pick -x {sha}`. It does not apply cleanly → `git cherry-pick --abort` and make the same change by hand as the brief describes; say which in DETAILS.
-4. Red first: run the failing check the brief quotes on your tree and quote its failure (`- red:`). It does not fail → BLOCKED with the run — never fix blind.
-5. Fix the named defect with the smallest change.
-6. Search for other instances of the collision class — other callers of the changed signature, other test doubles of the changed interface, other entries of the same registry — with `git grep -n`. Fix every hit that has the same collision (it still uses the old signature, interface or entry); report the search: `- class search: {command}: {N} hits, {k} fixed`, the hits in DETAILS.
-7. Batch fix: fix exactly the notes the brief names, one commit per note; DETAILS line `N-{n} → {what changed} ({sha})`.
-8. Checks: the targeted set (section 2, fast) over your changes + whole static analysis — every configuration, the whole tree (the command in quality-gate.md §Review and merge) + whatever else the brief's CHECKS name. Never the full test suite — the full gate runs, or re-runs from the failed step, after you.
-9. Commit per sdlc-state section 7 (`{ITEM-ID or EPIC-ID}: {description} [by Developer]`); push the branch you worked on plainly (`git push -u origin {branch}`). Never push the feature or `main` — the PM fast-forwards the feature after reading your diff.
+3. Red first: run the failing check the brief quotes on your tree and quote its failure (`- red:`). It does not fail → BLOCKED with the run — never fix blind. Exception — a failure the brief calls intermittent (fix loop): quote the gate report's red run as the red run, then after the fix prove stability with repeated runs, counted (`- stability: {command} × {n}: {n} passed`).
+4. Fix the named defect with the smallest change. Batch fix with a cherry-pick in the brief: `git cherry-pick -x {sha}`; it does not apply cleanly → `git cherry-pick --abort` and make the same change by hand as the brief describes; say which in DETAILS.
+5. Search for other instances of the collision class — other callers of the changed signature, other test doubles of the changed interface, other entries of the same registry — with `git grep -n`. Fix every hit that has the same collision (it still uses the old signature, interface or entry); report the search: `- class search: {command}: {N} hits, {k} fixed`, the hits in DETAILS.
+6. Batch fix: fix exactly the notes the brief names, one commit per note; DETAILS line `N-{n} → {what changed} ({sha})`. Notes only: red first per note that changes behavior (section 2, fast step 1); no behavior change → no red test, say so on that note's line.
+7. Checks: the targeted set (section 2, fast) over your changes + whole static analysis — every configuration, the whole tree (the command in quality-gate.md §Review and merge) + whatever else the brief's CHECKS name. Never the full test suite — the full gate runs, or re-runs from the failed step, after you.
+8. Commit per sdlc-state section 7 (`{ITEM-ID or EPIC-ID}: {description} [by Developer]`); push the branch you worked on plainly (`git push -u origin {branch}`). Never push the feature or `main` — the PM fast-forwards the feature after reading your diff.
 
 ## 3. Finalize
 
@@ -131,11 +131,11 @@ Not a story and not a bug: no spec artifacts, no story checkboxes, no review.
 
 ## 3b. Context and hand-off (both lanes)
 
-1. Tool output goes to a file under `{worktree_dir}/.reports/` (your brief names `{worktree_dir}`); read back `tail -n 30` or a `grep`. Never `cat` generated files, API snapshots or whole diffs — `git diff --stat`, then `git diff -- {one path}`.
+1. Tool output goes to `{reports}/{name}.log`, where `{reports}` is the absolute path your brief names (sdlc-state section 1) — outside your worktree, so a log is never committed; read back `tail -n 30` or a `grep`. Never `cat` generated files, API snapshots or whole diffs — `git diff --stat`, then `git diff -- {one path}`.
 2. Commit after every task (a tasks.md line, an OpenSpec task, a named finding, a note) — a crash then loses one task at most.
-3. One file per Write/Edit call — never several files in one Bash heredoc or script.
-4. Planned hand-off — stop at a task boundary (last task committed, next not started) when 4–5 tasks are done in this session and at least one remains, or when your context was compacted (earlier turns replaced by a summary). *Default, not law: deviate only on concrete grounds, and record the rationale in DETAILS.* Commit, push, report `OUTCOME: BLOCKED` with `CONTINUE: next task = {task id} {task text}` and `BLOCKERS: planned hand-off — needs a continuation dispatch`; EVIDENCE: tasks done `{N}/{M}`, the head SHA pushed, the checks run so far.
-5. Continuation dispatch (the brief names a `CONTINUE` task, or says a previous session's work may exist): first `git -C {worktree} status --short`. Uncommitted changes → inspect `git diff --stat`, then `git diff -- {path}` per file; keep a file whose change belongs to a task your checklist or brief names and on which quality-gate.md's formatter and linter exit 0; revert the rest (`git restore -- {path}`, each listed in DETAILS); commit the kept files as `{ITEM-ID}: Checkpoint of the previous session's work [by Developer]`. Then resume at the brief's `CONTINUE` task.
+3. One file per Write/Edit call — never several files in one Bash heredoc or script. WHY: a large multi-file call cut off mid-response leaves no file written and no record of which were meant.
+4. Planned hand-off — stop at a task boundary (last task committed, next not started) after 5 tasks done in this session with at least one remaining, or when your context was compacted (earlier turns replaced by a summary). *Default, not law: deviate only on concrete grounds, and record the rationale in DETAILS.* Commit, push if a remote exists, report `OUTCOME: BLOCKED` with `CONTINUE: next task = {task id} {task text}` and `BLOCKERS: planned hand-off — needs a continuation dispatch`; EVIDENCE: tasks done `{N}/{M}`, the head SHA pushed, the checks run so far.
+5. Continuation dispatch (the brief names a `CONTINUE` task, or says a previous session's work may exist): first `git -C {worktree} status --porcelain`. Modified files → inspect `git diff --stat`, then `git diff -- {path}` per file; untracked (`??`) files → read each by section. Keep a file whose change belongs to a task your checklist or brief names and on which the changed-files static checks of quality-gate.md §Per story step 4 exit 0 (no §Per story: the Format and Lint rows of the path-to-command table); drop the rest — `git restore -- {path}` (modified) or `rm -- {path}` (untracked), each listed in DETAILS; commit the kept files as `{ITEM-ID}: Checkpoint of the previous session's work [by Developer]`. Then resume at the brief's `CONTINUE` task.
 6. Stack, per your brief's `STACK`: `none` — start no stack; a selected check that needs one → BLOCKED naming it (the PM owns the stack budget). `local` — the precondition in quality-gate.md §How the full gate runs, on the ports your brief names. `runner {NN} slot {x}` — `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/runners.md` (start tokens; never an old log as a pass).
 7. An infrastructure outage (container engine down, registry unreachable) → `OUTCOME: BLOCKED` with the outage evidence — never a destructive reset ("reset to factory defaults", `docker system prune -a --volumes`); it destroys every image and volume on the host.
 
@@ -153,16 +153,17 @@ EVIDENCE:
 - path: {OpenSpec | spec-lite | bug | merge fix | batch fix | fix loop}{ — rework | — fix pass | — continuation}
 - stack: {none | local | runner {NN} slot {x}}
 - red: {test or check}: {failure line quoted}, exit {code}   (fast lane)
-- targeted: {command} — selected because {touched | consumer of {symbol} | whole-tree check for {fact} | always-run dir}: {counts}, exit {code}   (fast lane; one line per command)
+- targeted: {command} — selected because {touched | consumer of {symbol} | whole-tree check for {fact} | always-run dir}: {counts}, exit {code}   (fast lane; one line per command; several paths → "selected because {path}: {reason}; {path}: {reason}")
 - {each quality-gate command}: {actual result — e.g. "42 passed, 0 failed"}   (classic lane)
 - whole static analysis: {command}: {counts}, exit {code}   (section 2c)
 - class search: {command}: {N} hits, {k} fixed   (section 2c)
+- stability: {command} × {n}: {n} passed   (section 2c, an intermittent failure)
 - finding {id}: {what changed} ({sha})   (fix pass, one per finding)
 - acceptance criteria: {N}/{M} ticked   (bug: "regression test {name}: fails before, passes after")
 - follow-ups closed: {FU-ids | none}
 FILES:
 - {every file created/modified}
-REPORT FILE: {path under {worktree_dir}/.reports/ — only when the brief named one}
+REPORT FILE: {the {reports}/… path the brief named — only when it named one}
 CONTINUE: next task = {task id} {task text}   (planned hand-off only)
 BLOCKERS: {none | list with what is needed}
 DETAILS: {decisions worth the Reviewer's attention}
@@ -197,7 +198,7 @@ DETAILS: {decisions worth the Reviewer's attention}
 
 ## MUST NOT DO
 - Edit `docs/state/*.json`, the follow-ups file, the notes file, or a bug record — the PM owns them; you report.
-- Touch files outside your worktree or outside the item's scope; read code-tree files through the main checkout's path.
+- Touch files outside your worktree (`{reports}` excepted) or outside the item's scope; read code-tree files through the main checkout's path.
 - Mix OpenSpec and spec-lite within one story; create design/tasks artifacts for a bug or a section 2c fix.
 - Widen a rework or fix pass beyond the findings (and, classic only, passing follow-ups); act on notes the brief says not to act on.
 - Merge the feature into your branch unless a merge-fix brief says so; push the feature or `main`; force-push; skip hooks.
