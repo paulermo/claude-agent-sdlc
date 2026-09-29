@@ -1,29 +1,31 @@
 #!/bin/bash
 # agent-sdlc PreToolUse hook (Bash).
 # In SDLC-initialized projects, denies commits and PRs whose text carries an
-# attribution trailer (Co-Authored-By, "Generated with", 🤖, claude-session;
-# configurable via process.attribution_patterns). Agents follow the harness's
-# default commit template over a brief line that merely states the rule, so
-# the rule is enforced at the moment of the commit.
+# attribution trailer (Co-Authored-By, "Generated with Claude", 🤖,
+# claude-session; configurable via process.attribution_patterns). Agents follow
+# the harness's default commit template over a brief line that merely states
+# the rule, so the rule is enforced at the moment of the commit.
 #   Checked: git [-C path] [-c k=v] commit ..., git ... merge ... -m ...,
 #            gh pr create|edit with --title/-t/--body/-b/--body-file/-F.
-#   Scanned: the whole command text plus the -F/--file (git) or
-#            --body-file/-F (gh) message file.
+#   Scanned: the checked command's own text (from the invocation onward, so
+#            heredocs and -m "$(cat <<'EOF' ...)" are covered) plus the
+#            -F/--file (git) or --body-file/-F (gh) message file.
 #   Off switch: process.commit_attribution = true.
 #   Optional: process.commit_conventions.prefix_pattern ({PREFIX} = .prefix)
 #            is enforced on a `git commit` with one quoted -m message
 #            (Merge/Revert/fixup!/squash! exempt).
 # The project is found by walking up from the -C path (else the session cwd)
 # to the first docs/state/project.json. Silent no-op everywhere else.
+# Best-effort guard, not a security boundary. Known gaps: sh -c "...",
+# /usr/bin/git, merge -F/--message, -F "$VAR" (unexpanded paths).
 
+# Hot path: no jq, no subshell for commands that cannot be a checked one.
+IFS= read -r -d '' INPUT
+case $INPUT in *git*|*gh*pr*) ;; *) exit 0 ;; esac
 command -v jq >/dev/null 2>&1 || exit 0
 
-INPUT=$(cat)
 CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
-[ -n "$CMD" ] || exit 0
-case $CMD in *git*|*gh*) ;; *) exit 0 ;; esac
-CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
-[ -n "$CWD" ] || CWD=$PWD
+case $CMD in *git*|*gh*pr*) ;; *) exit 0 ;; esac
 
 deny() {
   jq -n --arg reason "$1" '{
@@ -59,16 +61,18 @@ RE_GHFLAG='(^|[[:space:]])(--title|--body|--body-file|-[tbF])'
 RE_GITFILE="(^|[[:space:]])(-F[[:space:]]+|--file[[:space:]]+|--file=)${VAL}"
 RE_GHFILE="(^|[[:space:]])(-F[[:space:]]+|--body-file[[:space:]]+|--body-file=)${VAL}"
 
-CHECKED=0; GIT_INV=""; COMMIT_REST=""; GH_REST=""; COMMIT=0
+# *_REST = the checked command's remainder (text after the subcommand);
+# only these, plus the message file, are scanned for patterns.
+CHECKED=0; COMMIT=0; GIT_INV=""; COMMIT_REST=""; MERGE_REST=""; GH_REST=""
 if [[ $CMD =~ $RE_COMMIT ]]; then
   CHECKED=1; COMMIT=1; GIT_INV=${BASH_REMATCH[0]}
   COMMIT_REST=${CMD#*"$GIT_INV"}
 fi
 if [[ $CMD =~ $RE_MERGE ]]; then
   M=${BASH_REMATCH[0]}
-  MERGE_REST=${CMD#*"$M"}
-  if [[ $MERGE_REST =~ $RE_DASHM ]]; then
-    CHECKED=1; [ -n "$GIT_INV" ] || GIT_INV=$M
+  R=${CMD#*"$M"}
+  if [[ $R =~ $RE_DASHM ]]; then
+    CHECKED=1; MERGE_REST=$R; [ -n "$GIT_INV" ] || GIT_INV=$M
   fi
 fi
 if [[ $CMD =~ $RE_GHPR ]]; then
@@ -81,6 +85,8 @@ fi
 [ "$CHECKED" -eq 1 ] || exit 0
 
 # --- Scope: -C path (relative to cwd) or cwd, walk up to project.json ---
+CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
+[ -n "$CWD" ] || CWD=$PWD
 START=$CWD
 if [[ $GIT_INV =~ $RE_DASHC ]]; then
   C=$(unquote "${BASH_REMATCH[1]}")
@@ -90,7 +96,7 @@ D=$(CDPATH= cd -- "$START" 2>/dev/null && pwd) || D=$START
 ROOT=""
 while [ -n "$D" ]; do
   if [ -f "$D/docs/state/project.json" ]; then ROOT=$D; break; fi
-  NEXT=$(dirname "$D")
+  NEXT=${D%/*}; [ -n "$NEXT" ] || NEXT=/
   [ "$NEXT" = "$D" ] && break
   D=$NEXT
 done
@@ -100,8 +106,10 @@ PROJ="$ROOT/docs/state/project.json"
 SWITCH=$(jq -r '.process.commit_attribution == true' "$PROJ" 2>/dev/null) || exit 0
 [ "$SWITCH" = "true" ] && exit 0
 
-# --- Attribution patterns: command text + message/body file ---
-TEXT=$CMD
+# --- Attribution patterns: checked command's remainder + message/body file ---
+TEXT="$COMMIT_REST
+$MERGE_REST
+$GH_REST"
 add_file() { # $1 raw file argument
   local f
   f=$(unquote "$1")
@@ -119,7 +127,7 @@ if [ -n "$GH_REST" ] && [[ $GH_REST =~ $RE_GHFILE ]]; then
   add_file "${BASH_REMATCH[3]}"
 fi
 
-PATTERNS=$(jq -r '(.process.attribution_patterns // ["co-authored-by","generated with","🤖","claude-session"])
+PATTERNS=$(jq -r '(.process.attribution_patterns // ["co-authored-by","generated with claude","🤖","claude-session"])
   | if type == "array" then .[] | strings else empty end' "$PROJ" 2>/dev/null)
 while IFS= read -r p; do
   [ -n "$p" ] || continue
@@ -149,7 +157,9 @@ esac
 case $MSG in Merge*|Revert*|'fixup!'*|'squash!'*) exit 0 ;; esac
 
 [[ $MSG =~ $PFXPAT ]]
-if [ $? -eq 1 ]; then
+rc=$?
+# rc 1 = no match -> deny; rc 2 = invalid regex in the config -> fail open.
+if [ "$rc" -eq 1 ]; then
   deny "agent-sdlc: commit message \"$MSG\" does not match the project's commit prefix pattern \"$PFXPAT\" (process.commit_conventions.prefix_pattern). Rewrite the message to match it (Merge, Revert, fixup! and squash! messages are exempt)."
 fi
 
