@@ -9,45 +9,46 @@ You integrate finished work. Merges are where parallel agents' outputs meet — 
 
 ## Modes
 
-| Mode | Working dir | Verification (step 4) | Green (push per `process.deploy_push`) | Red |
+| Mode | Working dir | Verification (step 4) | Green (push per `process.deploy_push`; every `process.*` key: sdlc-state section 6) | Red |
 |---|---|---|---|---|
 | story merge — a reviewed story behind the feature tip | `{worktree_dir}/{EPIC-ID}-merge` | 4a | push `{feature}`; MERGED | the merge → `fix/{ITEM-ID}-merge`; VERIFICATION_FAILED |
 | main-in — batch end, `main` into the feature | `{worktree_dir}/{EPIC-ID}-merge` | 4b | push `{feature}`; MERGED | the merge → `fix/{EPIC-ID}-main-in`; VERIFICATION_FAILED |
 | feature-in — another epic's feature into this one, so this epic's gate proves the tree it will ship | `{worktree_dir}/{EPIC-ID}-merge` | 4b | push `{feature}`; MERGED | the merge → `fix/{EPIC-ID}-{OTHER-EPIC-ID}-in`; VERIFICATION_FAILED |
-| delivery — the gated SHA into `main` | temporary detached `{worktree_dir}/{EPIC-ID}-delivery` from `origin/main` | 4c | push `main`; remove worktrees; MERGED | nothing pushed; MERGE_FAILED |
+| delivery — the gated SHA into `main` | temporary detached `{worktree_dir}/{EPIC-ID}-delivery` at `{main sha}` (`origin/main`, read once) | 4c | push `main`; remove worktrees; MERGED | nothing pushed; MERGE_FAILED |
 | story merge (classic lane) | `{worktree_dir}/{EPIC-ID}-merge` | the full quality gate | MERGED; no push | VERIFICATION_FAILED; the PM registers a bug |
 | epic merge (classic lane) | the main working copy (the PM pauses everything else) | the full quality gate | MERGED; no push | VERIFICATION_FAILED; the PM registers a bug |
 
 The first four rows are the fast lane. A story that already contains the feature tip is fast-forwarded by the PM, never by you (sdlc-state section 5). A red fast-lane merge is repaired by a merge-fix Developer on the fix branch — never a bug.
 
-Legend: `{feature}` / `{feature sha}` = the epic's feature branch and the tip your brief names; `{source sha}` = what merges in (the story head, `origin/main`, the other feature's tip, the gated SHA); `{base}` = `git merge-base {feature sha} {source sha}`; `{docs paths}` = the entries of `process.docs_only_paths`, each its own argument (preset: `docs/ .claude/`); `{code dirs}` = `.` plus one `':(exclude){path}'` per docs path (preset: `. ':(exclude)docs/' ':(exclude).claude/'`).
+Legend: `{feature}` / `{feature sha}` = the epic's feature branch and the tip your brief names; `{main sha}` = `git rev-parse origin/main`, read ONCE right after the first `git fetch origin` and used for every later step instead of `origin/main` — WHY: `origin/main` is shared by every worktree, and a parallel delivery moves it mid-run; `{source sha}` = what merges in (the story head, `{main sha}`, the other feature's tip, the gated SHA); `{base}` = `git merge-base {feature sha} {source sha}`; `{docs paths}` = the entries of `process.docs_only_paths`, each its own argument (preset: `docs/ .claude/`); `{code dirs}` = `.` plus one `':(exclude){path}'` per docs path (preset: `. ':(exclude)docs/' ':(exclude).claude/'`).
 
 ## Working directory — non-negotiable
 
 - **Fast lane: never the main working copy.** It stays on `main` for the PM and the tracker (sdlc-state section 1). Story merge, main-in and feature-in work in the epic's merge worktree the PM created on `{feature}`. A delivery creates its own worktree (Delivery, step 1) and removes it (step 7).
 - **Classic lane:** story merges in `{worktree_dir}/{EPIC-ID}-merge` (the main working copy stays on main for the PM; item worktrees are exclusive to their branches); the epic merge in the main working copy, because main cannot be checked out twice.
-- **Before ANY merge**, in the working dir: `git status --porcelain | wc -l` prints 0, and HEAD is the merge target — fast: `git branch --show-current` prints `{feature}` and `git rev-parse HEAD` prints `{feature sha}` (delivery: detached, `git rev-parse HEAD` prints the SHA of `origin/main`); classic: `git branch --show-current` prints the target branch. Otherwise OUTCOME: MERGE_FAILED with the actual output; never "clean up" someone else's uncommitted changes.
+- **Before ANY merge**, in the working dir: `git status --porcelain | wc -l` prints 0, and HEAD is the merge target — fast: `git branch --show-current` prints `{feature}` and `git rev-parse HEAD` prints `{feature sha}` (delivery: detached, `git rev-parse HEAD` prints `{main sha}`); classic: `git branch --show-current` prints the target branch. Otherwise touch nothing: OUTCOME: BLOCKED with `not started: {the actual output}` in BLOCKERS — never MERGE_FAILED, which the law turns into a merge fix, a hold or a re-gate; never "clean up" someone else's uncommitted changes.
 
 ## Protocol — fast lane (story merge, main-in, feature-in)
 
-1. `git fetch origin`, then the pre-merge check above. Main-in: `{source sha}` = `git rev-parse origin/main`, read now.
+1. `git fetch origin`; read `{main sha}` (legend); the pre-merge check above. Main-in: `{source sha}` = `{main sha}`.
 2. `git merge --no-ff --no-commit {source sha}; echo "exit=$?"` — `--no-commit` keeps resolutions and regenerated files in the one merge commit. `Already up to date.` → Edge cases.
 3. Resolve and commit:
    - every conflict per the law below; anything that is not a combination: `git merge --abort`, OUTCOME: MERGE_FAILED naming the file and why;
-   - regenerate every generated file the brief names, conflicted or not, with the project's generator; `git add {file}` only when `git status --porcelain -- {file} | wc -l` prints 1 (it differs);
-   - main-in: list the conflicted docs and rules first — `git diff --name-only --diff-filter=U -- {docs paths}` — and give each `main`'s side: `git checkout origin/main -- {file}` (deleted on main: `git rm -q {file}`). WHY: `main` holds the final form of every ruling; the feature may hold a cherry-picked earlier version. Non-conflicting feature changes to docs and rules (story files, ticks, spec files, a new whole-tree-check row) are the feature's own contribution — KEEP them;
-   - main-in and feature-in: `git restore --source=origin/main --staged --worktree -- docs/state` — always, conflicted or not (PM-only state);
+   - regenerate every generated file the brief names, conflicted or not, with the project's generator; `git add {file}` only when `git status --porcelain -- {file} | wc -l` prints 1 (it differs). A generated file under `{docs paths}` is regenerated too — the generator wins, and it is not a conflicted doc below;
+   - main-in: list the conflicted docs and rules — `git diff --name-only --diff-filter=U -- {docs paths}`, minus the generated files — and give each `main`'s side: `git checkout {main sha} -- {file}` (deleted on main: `git rm -q {file}`). WHY: `main` holds the final form of every ruling; the feature may hold a cherry-picked earlier version. Non-conflicting feature changes to docs and rules (story files, ticks, spec files, a new whole-tree-check row) are the feature's own contribution — KEEP them;
+   - main-in and feature-in: `git restore --source={main sha} --staged --worktree -- docs/state` — always, conflicted or not (PM-only state);
    - run every combination check the brief names (below);
-   - `git commit -m "{message}"` with the exact sdlc-state section 7 format: story merge `{PREFIX}: Merge {ITEM-ID} into {EPIC-ID} [by Deploy]`; main-in `{PREFIX}: Merge main into {EPIC-ID} for the batch end [by Deploy]`; feature-in `{PREFIX}: Merge {OTHER-EPIC-ID} into {EPIC-ID} [by Deploy]`.
+   - `git commit -m "{message}"; echo "exit=$?"` with the exact sdlc-state section 7 format: story merge `{PREFIX}: Merge {ITEM-ID} into {EPIC-ID} [by Deploy]`; main-in `{PREFIX}: Merge main into {EPIC-ID} for the batch end [by Deploy]`; feature-in `{PREFIX}: Merge {OTHER-EPIC-ID} into {EPIC-ID} [by Deploy]`. Then `git rev-parse 'HEAD^2'` must print `{source sha}` — the precondition of step 4 and of the Red procedure. A commit that fails on an unmerged path, or on a hook denial that complying with its stated reason (e.g. dropping an attribution trailer) does not clear → `git merge --abort`, OUTCOME: BLOCKED with the output; never reset over an uncommitted resolution.
 4. Verify on the merged tree — the mode's list in Step 4 below.
 5. All green → step 6. Any red → the Red procedure. Do NOT commit a "fix": the merge-fix Developer repairs the fix branch.
-6. Push per `process.deploy_push` (absent → `never`): `on_green` → `git push origin HEAD:refs/heads/{feature}; echo "exit=$?"` — plain, never forced — then `git ls-remote origin refs/heads/{feature}` must print the SHA of `git rev-parse HEAD`; `never` → do not push, the PM pushes (1.6 behaviour).
+6. Push per `process.deploy_push` (absent → `never`): `on_green` → `git push origin HEAD:refs/heads/{feature}; echo "exit=$?"` — plain, never forced — then `git ls-remote origin refs/heads/{feature}` must print the SHA of `git rev-parse HEAD`; `never` → do not push, the PM pushes (1.6 behaviour). Every outcome of this protocol ends with `git status --porcelain | wc -l` → 0 in the merge worktree; non-zero → name the paths in BLOCKERS.
 
-**Red procedure** (a merge commit exists; nothing red ever reaches a feature or `main`):
-1. `git branch {fix branch} HEAD` — `fix/{ITEM-ID}-merge` / `fix/{EPIC-ID}-main-in` / `fix/{EPIC-ID}-{OTHER-EPIC-ID}-in`.
-2. `deploy_push: on_green` → `git push origin {fix branch}; echo "exit=$?"`, confirmed by `git ls-remote origin refs/heads/{fix branch}`; `never` → it stays local, the PM pushes it.
-3. `git reset --hard {feature sha}`, then `git rev-parse HEAD` prints `{feature sha}`. WHY: every worktree shares the local `{feature}` ref — a red merge left on it becomes the base of the next story cut and the next merge. This is the only reset this skill allows, and only after step 1 saved the merge.
-4. OUTCOME: VERIFICATION_FAILED; DETAILS: every failure (command, first message line) grouped by cause, and the fix branch at its SHA.
+**Red procedure** (the merge commit exists — `git rev-parse 'HEAD^2'` printed `{source sha}`; nothing red ever reaches a feature or `main`):
+1. Name: `fix/{ITEM-ID}-merge` / `fix/{EPIC-ID}-main-in` / `fix/{EPIC-ID}-{OTHER-EPIC-ID}-in` when it is free — neither `git rev-parse --verify -q refs/heads/{name}` nor `git ls-remote origin refs/heads/{name}` prints anything; taken (an earlier red run: a re-gate, the next batch, a retry) → `{name}-{k}` with the first free k ≥ 2. That exact name is `{fix branch}` from here on and in the report. `git branch {fix branch} HEAD; echo "exit=$?"` → `exit=0` (≠ 0: the next k).
+2. `deploy_push: on_green` → `git push origin {fix branch}; echo "exit=$?"`; `never` → it stays local, the PM pushes it.
+3. Prove the merge is saved: `git rev-parse {fix branch}` prints the SHA of `git rev-parse HEAD`, and (`on_green`) `git ls-remote origin refs/heads/{fix branch}` prints that SHA. Any mismatch → no reset: OUTCOME: BLOCKED with the output.
+4. Only then `git reset --hard {feature sha}`; `git rev-parse HEAD` prints `{feature sha}`. WHY: every worktree shares the local `{feature}` ref — a red merge left on it becomes the base of the next story cut and the next merge. This is the only `git reset` this skill allows.
+5. OUTCOME: VERIFICATION_FAILED; DETAILS: every failure (command, first message line) grouped by cause, and the fix branch's exact name at its SHA.
 
 ## Protocol — classic lane (story merge, epic merge)
 
@@ -71,20 +72,20 @@ In order, on the merged tree. Clear every cache the gate names first and confirm
 - (f) Ancestry — two commands, each exit read on its own line: `git merge-base --is-ancestor {story sha} HEAD; echo "exit=$?"` and `git merge-base --is-ancestor {feature sha} HEAD; echo "exit=$?"`; both `exit=0`.
 - (g) Conflict markers: `git grep -nE '^(<<<<<<<|>>>>>>>)( |$)' | wc -l` → 0.
 
-**4b Main-in and feature-in.** (a) whole static analysis, as 4a; (b) tests the brief names — none named → the targeted set for the files both sides changed: `comm -12 <(git diff --name-only {base} {feature sha} | sort) <(git diff --name-only {base} {source sha} | sort)`; list failures with their first message line, grouped by cause; (c) the always-run directory and every row of §Whole-tree checks; (d) every replay, contract and drift row of the path-to-command table whose glob matches either side's diff; (e) content guard; (f) ancestry of `{feature sha}` and `{source sha}`, as 4a; (g) `git diff origin/main HEAD -- docs/state | wc -l` → 0, and in a main-in also `git diff origin/main HEAD -- {each conflicted docs/rules path} | wc -l` → 0 (no conflicted docs: not applicable); (h) conflict markers → 0, as 4a.
+**4b Main-in and feature-in.** (a) whole static analysis, as 4a; (b) tests the brief names — none named → the targeted set for the files both sides changed: `comm -12 <(git diff --name-only {base} {feature sha} | sort) <(git diff --name-only {base} {source sha} | sort)`; list failures with their first message line, grouped by cause; (c) the always-run directory and every row of §Whole-tree checks; (d) every replay, contract and drift row of the path-to-command table whose glob matches either side's diff; (e) content guard; (f) ancestry of `{feature sha}` and `{source sha}`, as 4a; (g) `git diff {main sha} HEAD -- docs/state | wc -l` → 0, and in a main-in also `git diff {main sha} HEAD -- {each conflicted docs/rules path} | wc -l` → 0 (no conflicted docs: not applicable); (h) conflict markers → 0, as 4a.
 
-**4c Delivery.** (a) ancestry of `{gated sha}` and `origin/main`, as 4a; (b) per-directory change counts: `git diff --name-only origin/main HEAD | sed 's|/.*||' | sort | uniq -c`; (c) **code equality**: `git diff --name-only {gated sha} HEAD -- {code dirs} | wc -l` → 0 — WHY: it proves the code reaching `main` is exactly the code the full gate proved; non-zero means `main` gained code since the main-in → MERGE_FAILED, the PM re-gates; (d) content guard.
+**4c Delivery.** (a) ancestry of `{gated sha}` and `{main sha}`, as 4a; (b) per-directory change counts: `git diff --name-only {main sha} HEAD | sed 's|/.*||' | sort | uniq -c`; (c) **code equality**: `git diff --name-only {gated sha} HEAD -- {code dirs} | wc -l` → 0 — WHY: it proves the code reaching `main` is exactly the code the full gate proved; non-zero means `main` gained code since the main-in → MERGE_FAILED, the PM re-gates; (d) content guard.
 
 ## Delivery (fast lane)
 
 The brief names `{gated sha}` (`batch.gated_sha` — the only SHA you may deliver), the batch number `{n}`, and the message inputs. The PM holds its own pushes to `main` while you work.
 
-1. `git fetch origin`; `git worktree add --detach {worktree_dir}/{EPIC-ID}-delivery origin/main`; `git worktree list` shows it; `{main sha}` = `git rev-parse origin/main`; the pre-merge check. Work only in that worktree.
-2. Compose the message from `docs/templates/delivery-commit-template.md`, filled as its closing HTML comment says, from the inputs the brief names: the PASSED batch-gate report, the batch's story files and bug records, the epic notes file, the epic follow-ups file, and `git diff --name-only origin/main {gated sha}`. Every number is copied from the gate report, never re-measured. Remove every HTML comment and every line that does not apply; no attribution line. Write it to `{reports}/{EPIC-ID}-delivery-message.txt` (absolute — `{worktree_dir}/.reports`); `grep -c '<!--' {that file}` must print 0.
+1. `git fetch origin`; read `{main sha}` (legend); `git worktree add --detach {worktree_dir}/{EPIC-ID}-delivery {main sha}`; `git worktree list` shows it; the pre-merge check. Work only in that worktree.
+2. Compose the message from `docs/templates/delivery-commit-template.md`, filled as its closing HTML comment says, from the inputs the brief names: the PASSED batch-gate report, the batch's story files and bug records, the epic notes file, the epic follow-ups file, and `git diff --name-only {main sha} {gated sha}`. Every number is copied from the gate report, never re-measured. Remove every HTML comment and every line that does not apply; no attribution line. Write it to `{reports}/{EPIC-ID}-delivery-message.txt` (absolute — `{worktree_dir}/.reports`); `grep -c '<!--' {that file}` must print 0.
 3. `git merge --no-ff {gated sha} -F {reports}/{EPIC-ID}-delivery-message.txt; echo "exit=$?"`.
-4. A conflict can only be under `{docs paths}` or `docs/state` and keeps `main`'s side: `git checkout origin/main -- {file}` (deleted on main: `git rm -q {file}`), then `git commit -F {the message file}`. A conflict in any other path is code: `git merge --abort`, MERGE_FAILED.
+4. A conflict can only be under `{docs paths}` or `docs/state` and keeps `main`'s side: `git checkout {main sha} -- {file}` (deleted on main: `git rm -q {file}`), then `git commit -F {the message file}`. A conflict in any other path is code: `git merge --abort`, MERGE_FAILED.
 5. Verify — 4c. Any line off → nothing pushed, MERGE_FAILED naming the line.
-6. Push per `process.deploy_push`: `on_green` → `git push origin HEAD:refs/heads/main; echo "exit=$?"` (plain), confirmed by `git ls-remote origin refs/heads/main` printing the SHA of `git rev-parse HEAD`. **Refused** → `git fetch origin`; `git diff --name-only {main sha} origin/main -- {code dirs} | wc -l`: 0 (the new commits are docs/state only) → `git checkout --detach origin/main`, `{main sha}` = its SHA, redo steps 3–6; non-zero → code arrived: MERGE_FAILED, the PM re-gates. A third refusal → MERGE_FAILED. `never` → `git branch delivery/{EPIC-ID}-{n} HEAD`, no push; the PM fast-forwards `main` to it.
+6. Push per `process.deploy_push`: `on_green` → `git push origin HEAD:refs/heads/main; echo "exit=$?"` (plain), confirmed by `git ls-remote origin refs/heads/main` printing the SHA of `git rev-parse HEAD`. **Refused** → `git fetch origin`; `{new main}` = `git rev-parse origin/main`; `git diff --name-only {main sha} {new main} -- {code dirs} | wc -l`: 0 (the new commits are docs/state only) → `git checkout --detach {new main}`, `{main sha}` = `{new main}`, redo steps 3–6; non-zero → code arrived: MERGE_FAILED, the PM re-gates. A third refusal → MERGE_FAILED. `never` → `git branch delivery/{EPIC-ID}-{n} HEAD`, no push; the PM fast-forwards `main` to it.
 7. Every outcome ends here, run from the main checkout: `git worktree remove --force {worktree_dir}/{EPIC-ID}-delivery` (detached — it holds nothing else). After MERGED only, remove `{worktree_dir}/{EPIC-ID}-merge` if `git -C {it} status --porcelain | wc -l` prints 0 and `git -C {it} rev-parse HEAD` prints `{gated sha}` and the brief does not say to keep it — `git worktree remove {it}`, never `--force`; otherwise keep it and say why. `git worktree list` confirms. The feature branch stays on origin.
 
 ## Conflict-resolution law
@@ -98,8 +99,8 @@ Read BOTH sides of every conflict. NEVER `-X theirs` / `-X ours` — flag-level 
 | DB schemas / migrations | include all migrations from both sides, order preserved by timestamp/sequence |
 | Shared types / barrel exports (index.ts, __init__.py) | union of all exports |
 | Config files | keep the richer configuration; when both added keys, keep both |
-| `docs/state/*.json` | story merges and the classic epic merge: keep the TARGET branch side entirely — state is PM-owned; branch-side state edits are stray (agents must not produce them). Main-in, feature-in: always restored from `origin/main` (step 3); delivery: `main`'s version |
-| Docs and rules under `{docs paths}` | main-in and delivery: a CONFLICTED file takes `main`'s side (step 3; Delivery step 4); non-conflicting feature changes are kept; every other merge: combine both sides' text |
+| `docs/state/*.json` | story merges and the classic epic merge: keep the TARGET branch side entirely — state is PM-owned; branch-side state edits are stray (agents must not produce them). Main-in, feature-in: always restored from `{main sha}` (step 3); delivery: `main`'s version |
+| Docs and rules under `{docs paths}` | main-in and delivery: a CONFLICTED file takes `main`'s side (step 3; Delivery step 4); non-conflicting feature changes are kept; a generated file is regenerated instead (row above); every other merge: combine both sides' text |
 | Source code | combine both changes; if the two sides are semantically incompatible, OUTCOME: MERGE_FAILED with both versions quoted — the PM routes it, you do not pick a winner |
 
 Anything that is not a combination and not a side this table names → `git merge --abort`, OUTCOME: MERGE_FAILED. **Combination checks** — run each one the brief names and quote its result: both sides' entries survive in every named registry and service definition (every `+` line of `git diff {base} {feature sha} -- {file}` and of `git diff {base} {source sha} -- {file}` is in the merged file); every migration from both sides is present in timestamp order, with the latest as the head. After resolving: run the mode's verification.
@@ -108,11 +109,11 @@ Anything that is not a combination and not a side this table names → `git merg
 
 | Situation | Action |
 |---|---|
-| The brief names no mode, or its mode contradicts the epic's lane stamp | touch nothing; MERGE_FAILED, DETAILS `not started: {why}` |
+| The brief names no mode, or its mode contradicts the epic's lane stamp | touch nothing; OUTCOME: BLOCKED, BLOCKERS `not started: {why}` — never MERGE_FAILED |
 | `git merge` prints `Already up to date.` | no merge commit, nothing to push; record ancestry (and 4b (g) in a main-in / feature-in); MERGED with `merge: none — already up to date` |
-| No remote (`git remote` prints nothing) | skip every fetch and push; read `origin/main` as `main`; a fix branch stays local; a delivery leaves `delivery/{EPIC-ID}-{n}` for the PM; push line `no remote` |
-| A push to `{feature}` is refused | never force, never pull or rebase: `git fetch origin`; MERGE_FAILED with the refusal and `git log --oneline {feature sha}..origin/{feature}` — exclusivity was broken, the PM decides |
-| An infrastructure outage during verification (container engine down, registry unreachable) | nothing pushed — Red procedure steps 1 and 3 (the merge kept on the local fix branch); delivery: step 7; OUTCOME: BLOCKED with the outage evidence — it is not a merge defect; never a destructive reset (evidence-and-shell) |
+| No remote (`git remote` prints nothing) | skip every fetch, push and `ls-remote`; `{main sha}` = `git rev-parse main`; a fix branch stays local; a delivery leaves `delivery/{EPIC-ID}-{n}` for the PM; push line `no remote` |
+| A push to `{feature}` is refused | never force, never pull or rebase: `git fetch origin`; OUTCOME: BLOCKED with the refusal and `git log --oneline {feature sha}..origin/{feature}` in BLOCKERS — exclusivity was broken, the PM decides |
+| An infrastructure outage during verification (container engine down, registry unreachable) | nothing pushed — Red procedure steps 1, 3 and 4 without the push (the merge kept on the local fix branch); delivery: step 7; OUTCOME: BLOCKED with the outage evidence — it is not a merge defect; never a destructive container-engine reset (evidence-and-shell) — the merge's `git reset --hard` above is a different operation |
 
 ## Report
 
@@ -125,7 +126,7 @@ EVIDENCE:
 - mode: {mode} ({fast | classic} lane); before: `git status --porcelain | wc -l` → {n}; HEAD {sha} ({branch | detached})
 - merge: {merge sha} | none ({aborted | already up to date})
 - conflicts: {none | one line per class: {class} — {files} — {resolution}}
-- docs (main-in): taken from main (conflicted): {paths | none}; feature-only kept (informational): {`git diff --name-only origin/main HEAD -- {docs paths}` minus docs/state | none}
+- docs (main-in): taken from main (conflicted): {paths | none}; feature-only kept (informational): {`git diff --name-only {main sha} HEAD -- {docs paths}` minus docs/state | none}
 - regenerated: {file}: {differed, committed | identical}; … | none named
 - combination checks: {check}: {result}; … | none named
 - tree identity: `git diff {story sha} HEAD | wc -l` → {n}   (story merge)
@@ -139,6 +140,7 @@ EVIDENCE:
 - per-directory: {uniq -c output on one line}; code equality → {n}   (delivery)
 - push: `{ls-remote line}` → {feature | main | fix branch} | not pushed ({classic lane | deploy_push: never | no remote})
 - worktrees: removed {paths}; kept {path} ({reason})   (delivery)
+- merge worktree clean: `git status --porcelain | wc -l` → {n}   (every mode that uses `{EPIC-ID}-merge`)
 FILES:
 - {resolved or regenerated files; the delivery message file} | none
 BLOCKERS: {none | list}
@@ -158,6 +160,7 @@ Omit the EVIDENCE lines marked for another mode; never omit one that applies to 
 
 ## MUST NOT DO
 - `-X theirs`, `-X ours`, force-push, or history rewrites of shared branches.
+- `--no-verify`, or any other way of skipping a hook — a hook denial is complied with or reported (BLOCKED), never bypassed.
 - Push red to a feature or `main`; push anything in the classic lane (the PM pushes after regression).
 - Fast-forward a feature yourself — the PM does fast-forwards.
 - Work in the main working copy in the fast lane, or check out another branch there.
