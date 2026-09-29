@@ -83,7 +83,7 @@ Init writes one of two presets. Keys are independent at runtime (a project may m
 
 **`epics.json`:** `milestones: {}` and `milestone_order: []` (C29 schema, spec C29 (d) point 1); epic entries gain
 optional `lane`, `batch: {n, items, stage, gate_run, gated_sha}` (created at a batch cut or when the batch end starts;
-`items: null` = the whole epic; `stage` ∈ `main_in | batch_fix | gate | fix_loop | notes | delivery`), `milestone`,
+`items: null` = the whole epic; `stage` ∈ `triage | main_in | batch_fix | gate | fix_loop | books | delivery`), `milestone`,
 `continued_by`, `base_branch`, `carries: [{epic, sha}]`, `delivers_after: []`. An item gets its own `milestone` only in
 the uncut exception. (Deviation: the spec's `batches[]` array became the single `batch` object — the PM needs the live
 batch's members and `gated_sha`; history lives in the log.)
