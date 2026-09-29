@@ -149,8 +149,8 @@ written, then the delivery. Step 6 below is the `books` stage.
 4. **Fix loop (F11)** on `fix/{EPIC}-gate-run{N}`: PM diff check + fast-forward, QA re-runs from the failed step. No bug,
    no review. **Addition (not in the spec):** after the 3rd red run, a user gate — "one more run" / "park the epic" —
    because every loop is bounded (the v1.6 round-economy principle); `--no-human` parks and narrates.
-5. **Re-gate** when `main` gained code since the main-in (count excluding `docs_only_paths`): main-in + gate again,
-   saved as `-regate`.
+5. **Re-gate** when `main` gained code since the main-in (count excluding `docs_only_paths`): main-in + gate again;
+   every run's report is `docs/reports/{EPIC}-batch{n}-gate-run{N}.md` (no separate `-regate` name).
 6. **Notes and follow-ups:** every N-line gets one resolution (fixed in the batch / → FU / dropped with a reason /
    carried); the default per category comes from a Default signal table. Follow-ups per `followups_gate` (`triage`:
    carry by ID, move to the hardening epic, drop, or one small hygiene bug for gate-breaking items; `hygiene_bug`: 1.6.1).
@@ -252,7 +252,14 @@ not a fourth verification layer" · Q5 plumbing list · Q6 · Q7 project-wide co
 §8) · Q10 / Q18 `docs_only_paths` shared, compared against the gated SHA, PM override as a decision line · Q11 · Q12
 `on_request` · Q13 `per_target_branch` with `per_epic` kept · Q14 · Q15 · Q16 · Q17 (b), `[by {Role}]` kept · Q19:
 `milestones` in `epics.json`, `{PREFIX}-MS-{n}`, closed milestones stay, no `frozen`/`dropped`, the uncut `stories`
-exception allowed.
+exception allowed · Q1 (fast default for new projects; see §2 for existing ones).
+
+**Recorded deviations from the spec's values:** Q17's default pattern is `generated with claude`, not `generated with`
+(the bare phrase denied tool output such as "lockfile generated with npm"); Q10's `docs_only_paths` default drops
+`docs/state/` (already covered by `docs/`); the spec's `batch_default` key is dropped (the batch is the epic unless the
+PM cuts it — sdlc-state §4 Epic); "parked" became an explicit `parked` field (a formula could not tell an item owed its
+last rework from an exhausted one — a 1.6 defect that a budget of 1 made universal); a red classic epic merge and a
+failed main regression now have rows (one bug, epic back to `in_progress`) where 1.6 had none.
 
 ## Traceability (change → files)
 
@@ -298,8 +305,8 @@ exception allowed.
 - Tracker — an isolated fixture (`AGENT_SDLC_TRACKER_BASE_PORT=4700`, a fake HOME) with milestones and a batch stage:
   `milestone_progress` in `/api/state`; the Milestones view and chips checked by screenshot.
 - `tests/lint/check-content.sh` — every JSON block in skills/templates parses; every "Load when" path and every brief
-  template referenced exists; no references to removed sections ("Deploy flow: epic → main" outside the classic
-  section, the old `briefs.md`).
+  template referenced exists; no references to the removed `briefs.md`; the quality-gate seed has its 9 sections; hook
+  scripts are executable; both manifests carry the same version.
 - A cold-executor dry run: a fresh subagent gets the new `start.md` + skills + a fixture state and walks a scenario
   (story rejected → fix pass → PM diff check; red real merge → merge fix; batch end with a red run 1 → fix loop;
   delivery → `main_regression`; a milestone via the command) and reports every point where it had to guess.

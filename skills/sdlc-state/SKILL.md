@@ -601,7 +601,7 @@ Milestone entry (inside `"milestones"`) and its order:
 | Key | Values | fast preset | classic preset (= absent) | Read by |
 |---|---|---|---|---|
 | `lane` | `fast` \| `classic` | `fast` | `classic` | epic stamp (section 4) |
-| `main_regression` | `always` \| `if_main_gained_code` \| `never` | `if_main_gained_code` | `always` | after every delivery (section 5; batch-end reference) |
+| `main_regression` | `always` \| `if_main_gained_code` \| `never` | `if_main_gained_code` | `always` | after every delivery (section 5; batch-end reference); a classic epic has no `gated_sha` and reads `if_main_gained_code` as `always` |
 | `docs_only_paths` | path prefixes that count as "documents" | `["docs/", ".claude/"]` | same | the main-regression count, the re-gate check, delivery conflicts |
 | `followups_gate` | `triage` \| `hygiene_bug` | `triage` | `hygiene_bug` | epic end (section 4, Follow-ups) |
 | `demo_gate` | `on_request` \| `blocking` \| `off` | `on_request` | `blocking` | after every delivery (start.md) |
@@ -694,7 +694,7 @@ While `process.commit_attribution` is `false` (both presets): no attribution tra
 ## MUST NOT DO
 
 - An agent editing `docs/state/*.json` — under any circumstances, including "just fixing" a stale status it noticed (report it instead).
-- PM applying a transition without a matching agent report with evidence — the only exceptions are the PM's own mechanical steps, each logged with its trigger: `fast-forward` (an item branch that already contains the feature tip, start.md Merge flow) and `batch end` (the books → `ready_for_deploy` step).
+- PM applying a transition without a matching agent report with evidence — the only exceptions are the section 5 rows whose event is a PM check, a PM decision or a user decision (a PM fast-forward, the light-tier QA skip, the batch-end books step, `deployed → done` by the main-regression policy, `deployed → in_progress` after a cut batch, milestone decisions), each logged with its trigger (`fast-forward`, `decision`, `batch end`, `decision: user`).
 - Inventing entry fields or statuses not defined here — extend this file first (see docs/extending-sdlc.md).
 - Writing log lines with relative or local times — ISO-8601 UTC only.
 - Deleting an entry from its source file before the destination file is written and parses — move discipline is destination-first, and the tempting "delete first so I don't forget" order turns a crash into data loss.

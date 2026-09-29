@@ -39,7 +39,7 @@ Do NOT read: other stories, unrelated modules (except to verify a boundary viola
 2. Judge the selection: build the required set yourself, **by search, never from memory** — the same rule the Developer follows (§Per story step 3). For each symbol the diff defines or changes, `git -C {worktree} grep -n '{symbol}'` finds its consumers (callers, wiring, routes, event consumers, shared fixtures and every test that uses them); add the tests mirroring each touched path, the always-run directory, each `quality-gate.md` §Whole-tree checks row whose "Selected by" matches a fact the change adds, and the replay row when its paths changed.
 3. Each required path the Developer's set lacks → ONE **MANDATORY** class finding (`Rule: quality-gate.md §Per story — selection`), every omitted path listed with the reason it is required. The finding stands whatever those tests would show — do not run them to decide; the fix pass runs them. WHY: an omitted whole-tree check once stayed red on the feature branch and on `main` until a later story stumbled on it — the selection is the proof, and no later per-story check catches its gaps.
 
-**Proof, classic lane — the quality gate:** run the path-to-command table yourself (`.claude/rules/quality-gate.md` §Lanes: every section whose glob matches the change, every row); never trust the Developer's claim.
+**Proof, classic lane — the quality gate:** run the path-to-command table yourself (`.claude/rules/quality-gate.md` §Lanes: every section whose glob matches the change, every row; a quality-gate.md without a path-to-command table (pre-2.0): every command it lists); never trust the Developer's claim.
 
 | Situation | Action |
 |---|---|

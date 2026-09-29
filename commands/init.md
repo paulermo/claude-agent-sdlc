@@ -112,7 +112,7 @@ content/
   "integrations": { "notifications": null, "issue_tracker": null, "ci_cd": null, "runners": { "enabled": false, "tooling_dir": null, "inventory": null } }
 }
 ```
-(The `process` block above is the **fast preset** of sdlc-state section 6 — keep every value except `lane` and `shell`, which come from answers 5 and 6. If the user chose `classic` in answer 5, set `lane` to `classic` and keep the rest: the other keys are independent of the lane. `content_guard` from answer 7: `{"command": "{cmd}", "pre_commit": true | false}` or `null`. `integrations.runners.enabled` from answer 8.)
+(The `process` block above is the **fast preset** of sdlc-state section 6 — keep every value except `lane` and `shell`, which come from answers 5 and 6. If the user chose `classic` in answer 5, write the **classic preset** instead — the JSON of step 2.5c.5 below, verbatim — so no fast-lane-only value (`if_main_gained_code`, `triage`, `on_request`, `just_in_time`, `on_green`, `per_target_branch`) runs on a classic project. `content_guard` from answer 7: `{"command": "{cmd}", "pre_commit": true | false}` or `null`. `integrations.runners.enabled` from answer 8.)
 
 (Migration runs: merge missing agent entries into the existing registry — notably `deploy` —, add missing counters — notably `"bug": 0` —, and rename the legacy `phase` key of registry entries to `stage`. Leave everything else untouched. Item entries need no migration: absent `kind` / `tier` / `returns` read as `story` / `standard` / `0` per sdlc-state. The `process` block and the 2.0 counters are added by 2.5c, never by this template.)
 

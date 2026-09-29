@@ -35,7 +35,7 @@ Test plan (full gate at {gated sha} with main merged in, on {runner {NN} slot {x
        epic ID and the dash.
      - What changed: from the batch's story files and bug records (titles + acceptance criteria), grouped by behavior area;
        batch fixes from the notes file lines resolved "→ fixed in the batch".
-     - Order / Before merge: from `git diff --name-only origin/main {gated sha}` (migrations, config, infra, secrets names).
+     - Order / Before merge: from `git diff --name-only {main sha} {gated sha}` (`{main sha}` as read once at the start of the delivery) (migrations, config, infra, secrets names).
      - Follow-ups: the open FU IDs of the epic's followups.md — IDs only, never new text.
      - Test plan: the numbers of the PASSED batch-gate report, copied, never re-measured.
      Remove every HTML comment and every line that does not apply before committing.

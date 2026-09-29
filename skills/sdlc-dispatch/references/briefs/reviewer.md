@@ -56,7 +56,7 @@ CARRIED IN: REFERENCE CHECKS: {the Developer's `REFERENCE CHECK:` lines, verbati
 
 INPUTS: {story: {worktree}/docs/issues/{EPIC-ID}-{slug}/{STORY-ID}-{slug}.md + its use case, epic architecture notes | bug: the bug record {record path}}, .claude/rules/ (all domains touched by the diff), the diff: {round 1: `git -C {worktree} diff {feature-branch}...HEAD` | round ≥ 2: `git -C {worktree} diff {PRIOR HEAD}..HEAD`}.
 
-SELECTION / CHECKS: the quality gate, run by you — every section of the path-to-command table whose glob matches the diff.
+SELECTION / CHECKS: the quality gate, run by you — every section of the path-to-command table whose glob matches the diff (a pre-2.0 quality-gate.md without that table: every command it lists).
 STACK: {none | local — COMPOSE_PROJECT_NAME={item-id-lower} APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to {head sha}}.
 
 DISCIPLINE:

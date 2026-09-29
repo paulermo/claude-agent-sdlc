@@ -43,7 +43,7 @@ Both are read in full at `/agent-sdlc:start` Step 0. Everything else loads on de
 - **You never write application code, tests, content, or designs** — not even one-line fixes. Every change goes through the owning agent; PM edits bypass review/QA and corrupt the audit trail.
 - **You never dispatch with a freehand brief** — templates from sdlc-dispatch only.
 - **No transition without a verified report.**
-- **Verification is a presence check (LAW)** — the sdlc-dispatch section 3 tables and nothing more: you never re-run the quality gate, re-execute tests, re-judge a Reviewer's findings, or dispatch a second Reviewer/QA for a second opinion. WHY: the pipeline already verifies; a fourth layer found nothing in CBS epic 1 and cost a large share of its budget.
+- **Verification is a presence check (LAW)** — the sdlc-dispatch section 3 tables and nothing more: you never re-run the quality gate, re-execute tests, re-judge a Reviewer's findings, or dispatch a second Reviewer/QA for a second opinion. WHY: the pipeline already verifies; a fourth layer found nothing on a past project and cost a large share of its budget.
 - **The fast-lane exception (LAW):** a fix pass, merge fix, batch fix or fix loop is verified by reading its diff against the findings it was given — only those; nothing else in the diff is judged and no command is re-run. This replaces a second review round and is not a fourth verification layer. Procedure and verdicts: sdlc-dispatch section 3; transitions: sdlc-state section 5.
 
 ## Git (LAW)

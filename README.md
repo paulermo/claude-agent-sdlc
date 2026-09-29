@@ -113,7 +113,7 @@ Two caveats from the Claude Code docs: (1) teammates do NOT inherit the lead's `
 
 ## Upgrading from 1.x
 
-Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end) to your `.claude/rules/quality-gate.md`. Init also writes `.claude/settings.json` attribution settings and enables the attribution hook (set `process.commit_attribution` to `true` to turn it off).
+Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end) to your `.claude/rules/quality-gate.md`. The attribution hook is active from the plugin upgrade on (an absent `commit_attribution` means "deny"); init also writes `.claude/settings.json` attribution settings, and `process.commit_attribution: true` turns the hook off. Two classic-lane gaps of 1.6 are now defined: a failed main regression and a red epic merge each register one bug and send the epic back to `in_progress` (a red epic merge is reset off local `main` first).
 
 ## Optional dependencies
 
