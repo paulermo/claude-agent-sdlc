@@ -164,7 +164,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 ### Phase: IMPLEMENTATION (items in actionable statuses)
 
-**Dispatch map** (agent names are exact `subagent_type` values; `Lane` = the item's epic's stamp; nothing is dispatched for a parked item, a `held` item, or any item of a `held` epic):
+**Dispatch map** (agent names are exact `subagent_type` values; `Lane` = the item's epic's stamp; nothing is dispatched for a parked item, a `held` item, any item of a `held` epic, or — fast lane — an item outside its epic's cut batch (`batch.items` is a list that does not name it: it is neither dispatched nor merged until the batch delivers)):
 
 | Lane | Status | Item | Dispatch | On dispatch, set status to |
 |------|--------|------|----------|---------------------------|
@@ -196,7 +196,7 @@ Sequential dispatches — each verified (sdlc-dispatch verification table) befor
 
 **Worktree creation** (for `todo` / rejected items without one): respect `max_parallel_teammates` and the stack budget; create the feature/content-epic branch if missing — from `main`, or from `base_branch` when the epic has one (cross-epic reference) — `feature/{EPIC-ID}-{slug}` / `content/{CEPIC-ID}-{slug}`; create the item branch from it (`story/…`, `bug/…`, `content/…`); `git worktree add {worktree_dir}/{ITEM-ID} {branch}`; allocate ports (app from 3100, db from 5433); register the worktree entry in `project.json` with `stack` per the brief's STACK slot; set the item's `worktree` field; commit state.
 
-**Merge worktree** (first `ready_for_merge` item of an epic): `git worktree add {worktree_dir}/{EPIC-ID}-merge {feature-branch}` — merges, fast-forwards and the batch gate work there. Remove it when the epic is done.
+**Merge worktree** (first `ready_for_merge` item of an epic): `git worktree add {worktree_dir}/{EPIC-ID}-merge {feature-branch}` — merges, fast-forwards and the batch gate work there — and register it in `project.json.worktrees` under the key `{EPIC-ID}-merge` (whenever that entry is missing, even if the directory already exists). Remove it and its entry when the epic is done.
 
 **Dispatching teammates (parallel):** group all dispatchable items (respecting both caps and Deploy's exclusivity from sdlc-dispatch section 2). Spawn one teammate per item — `subagent_type` from the map, name `{role}-{ITEM-ID}`, the model from sdlc-dispatch section 1, brief = the filled template from the role's brief file (it carries `LANE:` and `{reports}`). Set each item's working status + dispatch log line (base sha, stack, model), commit state (`{PREFIX}: Update state after dispatch [by PM]`, by path), and narrate the batch (one `▶` line per item).
 
