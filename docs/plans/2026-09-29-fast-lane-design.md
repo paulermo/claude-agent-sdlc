@@ -127,7 +127,14 @@ batch's members and `gated_sha`; history lives in the log.)
 
 ## 5. Batch end and delivery (C3 resolution, C6–C9, C26) — `references/batch-end.md`
 
-Starts when every item of the batch is `done`; `epic.batch.stage` tracks the step.
+Starts when every item of the batch is `done`; `epic.batch.stage` tracks the step
+(`triage → main_in → batch_fix → gate ⇄ fix_loop → books → delivery`).
+
+**Refinement made during implementation:** the notes and follow-ups work is split in two. **Triage** (stage `triage`,
+before the main-in): the PM chooses which NOTEs and which small gate-breaking/correctness follow-ups the batch fix
+takes, and registers a hygiene bug for larger ones (the batch waits for it) — so nothing found at triage lands after
+the gate. **Books** (stage `books`, after the gate is green): every N-line gets its resolution, follow-up outcomes are
+written, then the delivery. Step 6 below is the `books` stage.
 
 1. **Main-in (F5)** in `{EPIC}-merge`: docs and rules take `main`'s side (then `git diff origin/main HEAD -- {docs}`
    prints nothing), generated files regenerated, code combined, anything else → abort. Green → push the feature;
@@ -199,7 +206,8 @@ are not dispatched until the delivery. **Classic** keeps the 1.6.1 "Deploy flow"
   planning roles work in `.worktrees/{ROLE}-{topic}` and the PM merges their branches; stray state commits per C20; the
   PM's permitted plumbing is a closed list: `merge --ff-only`, plain push, trailer amend on an unpushed agent commit,
   `--no-ff` merge of a planning or ruling branch into `main`, worktree removal (Q5).
-- **Records (C21):** Reviewer and QA write documents to the `REPORT FILE` the brief names (`{scratchpad}`); the PM copies
+- **Records (C21):** Reviewer and QA write documents to the `REPORT FILE` the brief names — `{worktree_dir}/.reports/`
+  (git-ignored with the worktree dir; a PM scratchpad would be another session's private directory); the PM copies
   them into `docs/reviews/` and `docs/reports/` (Appendix A); `note` / `followup` counters.
 - **Briefs and reports (C18, C22, Q3):** the brief cap becomes slots — WHY (≤ 2 sentences), KIND/TIER/ROUND, WORKTREE
   (base SHA + what the tree has), CARRIED IN (≤ ~600 characters), INPUTS, SELECTION/CHECKS, STACK, DISCIPLINE,
