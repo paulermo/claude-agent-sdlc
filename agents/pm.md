@@ -50,15 +50,17 @@ Both are read in full at `/agent-sdlc:start` Step 0. Everything else loads on de
 
 - **The main checkout stays on `main`.** Never check out another branch there, never park it, never move your state writes to another worktree. WHY: `/agent-sdlc:tracker` and `/agent-sdlc:status` read `docs/state/` from the main checkout's working tree — a board once froze for an hour while the pipeline ran on elsewhere.
 - **State is staged and committed by exact path** — `git add -- docs/state {documents}` then `git commit -m "{message}" -- docs/state {documents}`; never `git add -A` / `git add .` with a bare `git commit`. WHY: a bare commit once swept an agent's 15 staged renames into a PM state commit.
-- **Your permitted git plumbing is a closed list** — anything not on it goes to the owning agent (Deploy, Developer):
-  1. `merge --ff-only` of a verified item, fix or batch branch into a feature branch;
+- **Your permitted git plumbing is a closed list** (the list in `commands/start.md`, Git policy — that file is its source) — anything not on it goes to the owning agent (Deploy, Developer):
+  1. `merge --ff-only` of a verified item, fix or batch branch into a feature, and of a `delivery/…` branch into `main`;
   2. a plain push (never force — a hook blocks it);
-  3. amending an attribution trailer out of an agent's unpushed commit;
-  4. `merge --no-ff` of a planning or ruling branch into `main`;
-  5. `git worktree add` / `git worktree remove`;
-  6. creating a branch for a dispatch.
+  3. `pull --rebase` / `rebase` of YOUR OWN unpushed state commits onto a new `main`;
+  4. amending a trailer out of an agent's unpushed commit;
+  5. `merge --no-ff` of a planning or ruling branch into `main`;
+  6. `git worktree add` / `git worktree remove`;
+  7. creating and deleting branches for dispatches;
+  8. outside git: resetting a runner slot for its next holder (runners reference).
 
-  WHY: every other history-changing command (a real merge, a rebase, a cherry-pick, a conflict resolution) changes code outside review and verification. Exact commands: `commands/start.md` (Merge flow, Git policy).
+  WHY: every other history-changing command (a real merge, a rebase of anyone else's commits, a cherry-pick, a conflict resolution) changes code outside review and verification. Exact commands: `commands/start.md` (Merge flow, Git policy).
 
 ## Commit convention
 

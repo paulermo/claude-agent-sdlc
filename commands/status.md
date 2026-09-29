@@ -18,8 +18,8 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
 2. **Read state:**
    - Read `docs/state/epics.json` and `docs/state/active.json` fully.
    - Counts only, via Bash jq (do NOT Read these files):
-     - backlog per status: `jq -r '[.stories,.content_tasks] | map(to_entries[]?.value.status) | group_by(.) | map("\(.[0]): \(length)") | join(", ")' docs/state/backlog.json`
-     - backlog items per epic (for the not-started epics' `0/{total}`): `jq -r '[.stories,.content_tasks | to_entries[]?.value.epic] | group_by(.) | map("\(.[0]) \(length)") | .[]' docs/state/backlog.json`
+     - backlog per status: `jq -r '[(.stories // {}), (.content_tasks // {}) | to_entries[].value.status] | group_by(.) | map("\(.[0]): \(length)") | join(", ")' docs/state/backlog.json`
+     - backlog items per epic (for the not-started epics' `0/{total}`): `jq -r '[(.stories // {}), (.content_tasks // {}) | to_entries[].value.epic] | group_by(.) | map("\(.[0]) \(length)") | .[]' docs/state/backlog.json`
      - archived total: `find docs/state/archive -name 'done-*.json' -exec cat {} + 2>/dev/null | jq -s '[.[] | (.stories//{}|length)+(.content_tasks//{}|length)] | add // 0'`
 
 3. **Determine project phase** (sdlc-state phase table):
@@ -66,6 +66,7 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
        epics delivered {d}/{n} ({x} awaiting main regression) · items done {i}/{t} (slice planned {p})
        in flight: {EPIC-ID} {batch stage / gate run N}; {EPIC-ID} {k} in review, {m} in progress
        blocked: {ITEM-ID} parked (budget gate); {ID} held ({reason}); {EPIC-ID} frozen
+     {PREFIX}-MS-{K} {title}  [planned]  epics 0/{n} · items 0/{t}
    Epics:
      {PREFIX}-EPIC-{N} {title}  [MS-{K}]  [{done}/{total} stories done]  [{status}]  [{lane}]  [{batch stage}]
      ...
@@ -93,7 +94,7 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
 
    - `Open notes`: every line of step 5's notes command, zero counts included (`none` when no fast-lane epic is in flight). `Open follow-ups`: only non-zero counts, `{total}` = their sum (`none` when the sum is 0). `Fix branches (open)`: only branches with `{n}` = 0. `Held`: step 4.3's epics then items. The runner-slots part appears only when that command printed something.
 
-   **The Milestones block** — one entry per milestone in `milestone_order`; the whole block (header included) is omitted when there are no milestones:
+   **The Milestones block** — one entry per milestone in `milestone_order`; the whole block (header included) is omitted when there are no milestones. A milestone with status `planned` and an empty `in_flight` takes the one-line form `{PREFIX}-MS-{K} {title}  [planned]  epics 0/{n} · items 0/{t}` (`{n}` and `{t}` = the denominators of `epics_delivered` and `items_done`) instead of lines 1–3; its `blocked:` line (line 4) still follows when it has entries. Every other milestone takes the four lines:
 
    | Line of the template | Built from | Omit |
    |---|---|---|
@@ -104,26 +105,26 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
 
    `in flight` — parts joined with `; `: walk the milestone's `epics` in order; for each, one part `{EPIC-ID} {batch stage label}` when `in_flight` has `{EPIC-ID} batch {stage}` (label table below), and/or the counts of that epic's `{ITEM-ID} {status}` entries (each item's `epic` from `active.json` — every item in a working status lives there), printed as `{k} in review, {q} in QA, {m} in progress, {c} creating, {g} integrating` — non-zero counts only, in that order, joined to the label with `, `. Then one part `{ITEM-ID} {status in words}` (the same words: `in review`, `in QA`, `in progress`, `creating`, `integrating`) for each entry whose item is listed in the milestone's `stories` (the uncut exception — its epic is not linked).
 
-   `blocked` — parts joined with `; `, in this order: each `{ITEM-ID} parked` → `{ITEM-ID} parked (budget gate)`; each held epic in the milestone's `epics` and each held item whose epic is in `epics` or which is in `stories` → `{ID} held ({reason})`; then the remaining entries exactly as printed (`{EPIC-ID} red gate run {N}`, `{EPIC-ID} frozen`, `{EPIC-ID} waits for {EPIC-ID}`).
+   `blocked` — parts joined with `; `, in this order: each `{ITEM-ID} parked` (an item whose entry carries `"parked": true` — sdlc-state section 4) → `{ITEM-ID} parked (budget gate)`; each held epic in the milestone's `epics` and each held item whose epic is in `epics` or which is in `stories` → `{ID} held ({reason})`; then the remaining entries exactly as printed (`{EPIC-ID} red gate run {N}`, `{EPIC-ID} frozen`, `{EPIC-ID} waits for {EPIC-ID}`).
 
    **Epic lines:**
    - `[MS-{K}]` — the epic's `milestone` without the `{PREFIX}-` prefix (`TST-MS-3` → `MS-3`); no `milestone` field → omit the bracket.
    - `[{done}/{total} stories done]` — counted in `active.json` for epics in `in_progress` / `ready_for_deploy` / `deployed` (every entry of the `stories` or `content_tasks` map whose `epic` is this epic, bugs included); `0/{total}` from the backlog per-epic count for `planning` / `ready` / `frozen` epics (bucket law, sdlc-state section 2).
    - `[{lane}]` — the epic's `lane` stamp; no stamp: `type: cepic` → `classic`; status `planning` / `ready` / `frozen` → `{lane for new epics} at start` (the stamp it will get — sdlc-state section 4, Lanes); any other status → `classic`.
-   - `[{batch stage}]` — only when `batch.stage` is set, labelled from `batch.n`, `batch.stage` and `batch.gate_run`:
+   - `[{batch stage}]` — only when `batch.stage` is set. The label (used here and in the Milestones `in flight` line) is `{batch} {stage}`: `{batch}` = `batch` while `batch.n` is 1, `batch {n}` when `batch.n` ≥ 2; `{stage}` from this table (e.g. `batch gate run 2`, `batch 2 fix`):
 
-   | `batch.stage` | `{batch stage}` label |
+   | `batch.stage` | `{stage}` |
    |---|---|
-   | `triage` | `batch {n}: triage` |
-   | `main_in` | `batch {n}: main-in` |
-   | `batch_fix` | `batch {n}: batch fix` |
-   | `gate` | `batch {n}: gate run {gate_run + 1}` |
-   | `fix_loop` | `batch {n}: fix loop after red gate run {gate_run}` |
-   | `books` | `batch {n}: books` |
-   | `delivery` | `batch {n}: delivery` |
+   | `triage` | `triage` |
+   | `main_in` | `main-in` |
+   | `batch_fix` | `fix` |
+   | `gate` | `gate run {gate_run + 1}` |
+   | `fix_loop` | `fix loop after red gate run {gate_run}` |
+   | `books` | `books` |
+   | `delivery` | `delivery` |
 
    **Active work:** `{tier}` / `{returns}` come from the entry (absent = `standard` / `0`); `{budget}` is the return budget of the item's lane and tier (sdlc-state section 4, Kinds, tiers, budgets): classic lane — light 1, standard 2, critical 3, bugs always 1; fast lane — 1 at every tier, every kind. The item's lane is its epic's (`lane` stamp; absent → classic). Two overrides beat every table below:
-   - An item in `review_rejected` / `qa_rejected` with `returns >= budget` is **parked** — its next action is always "PARKED — budget exhausted; answer the budget gate in /agent-sdlc:start or drop an unpark directive".
+   - An item whose entry carries `"parked": true` is **parked** (sdlc-state section 4 — the flag, never a `returns` formula) — its next action is always "PARKED — budget exhausted; answer the budget gate in /agent-sdlc:start or drop an unpark directive".
    - An item with `held` — its next action is always "HELD — {held}; answer the gate in /agent-sdlc:start or drop an `unhold-{ITEM-ID}.md` directive".
 
    Where `{next action}` maps status to human-readable action:
@@ -144,7 +145,7 @@ Every count below comes from the command shown next to it. A `grep -c` prints a 
 
    **Fast-lane overrides** (the item's epic has `lane: fast`; `ready_for_qa`, `in_qa`, `qa_rejected`, `merged` and `regression_failed` never occur there):
    - `in_progress` with `returns` 1 → "Developer fix pass (the one return)"
-   - `review_rejected` (not parked) → "rejected by Reviewer — one fix pass, checked by the PM's diff read"
+   - `review_rejected` without `parked` → "rejected by Reviewer — one fix pass, checked by the PM's diff read"
    - `ready_for_merge` → "ready to merge into the feature (PM fast-forward, or Deploy real merge; a red merge goes to a merge-fix Developer)"
 
    **Bug statuses** (`kind: bug` — same statuses, fewer stages by tier and lane):
