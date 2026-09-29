@@ -28,9 +28,9 @@ A ruling is one small Architect decision made mid-flight — docs, `.claude/rule
    wc -l < {reports}/ARCH-{topic}.paths
    ```
 
-5. Merge into `main` from the main checkout, your state committed first (`git status --porcelain | wc -l` → `0`): `git merge --no-ff {branch} -m "{PREFIX}: Merge Architect {topic} [by PM]"; echo "exit=$?"`. No ruling commit on the branch (nothing ruled) → skip to step 7.
+5. Merge into `main` from the main checkout, your state committed first (`git status --porcelain | wc -l` → `0`): `git merge --no-ff {branch} -m "{PREFIX}: Merge Architect {topic} [by PM]"; echo "exit=$?"`. No ruling commit on the branch — `git rev-list --count main..{branch}` prints `0` (nothing ruled) → skip to step 7.
 6. Push: `git push origin main; echo "exit=$?"` (remote only; plain) — while a delivery Deploy works, hold it until Deploy reports (batch-end step 7).
-7. Remove: `git worktree remove {wt}; echo "exit=$?"`, then `git worktree list | grep -cF '/ARCH-{topic} '` → `0`.
+7. Remove the worktree, then delete the branch — WHY: a branch name like `architect/{EPIC-ID}-notes` recurs every batch: `git worktree remove {wt}; echo "exit=$?"`; `git worktree list | grep -cF '/ARCH-{topic} '` → `0`; `git branch -d {branch}; echo "exit=$?"` (merged into `main`, or holding no commit of its own); `git push origin --delete {branch}; echo "exit=$?"` (remote only; skip when never pushed).
 8. Completion line on `{ITEM-ID}` (`"trigger":"Architect"`, `"note":"DESIGNED: {the ruling, one clause}; ruling {sha(s)}; merged {merge sha}"`); commit state by path; narrate the decision in two bullets of substance (start.md Narration).
 
 WHY `--no-ff` into `main` at once: `main` holds the final form of every ruling; features take it at their main-in, where a conflicting doc or rule takes `main`'s side (story-merge skill).
@@ -51,7 +51,7 @@ The report's "Builds it" says `needs a new story: {scope}`:
 
 1. Reserve the ID: `counters.story` + 1 in `project.json`; commit by path.
 2. Dispatch the System Analyst — `briefs/planning.md` "System Analyst — one story from a ruling" (story-breakdown, that mode) — with the reserved ID, the ruling's ADR and the epic, in a planning worktree merged as start.md's planning phase says.
-3. Register the story (sdlc-state §6) into the bucket the epic's status dictates (sdlc-state §2); log `"from": null`, `"trigger": "System Analyst"`; commit by path. The epic's batch end is already running → cut the batch to its current members first (batch-end, Cut a batch), so the new story waits for the next batch.
+3. Register the story (sdlc-state §6) into the bucket the epic's status dictates (sdlc-state §2); log `"from": null`, `"trigger": "System Analyst"`; commit by path. The epic's batch end is already running → cut the batch to its current members first (batch-end, Cut a batch: set `batch.items` only, never reset its stage or counters), so the new story waits for the next batch.
 
 ## Situation | Action
 

@@ -14,7 +14,7 @@ git add -- docs/state {documents this step wrote}
 git commit -m "{PREFIX}: Update state — {EPIC-ID} {old stage}→{new stage} [by PM]" -- docs/state {documents this step wrote}
 ```
 
-Every other decision line below: this shape with `"trigger":"decision"` and its fixed note, verbatim (sdlc-state §7). Dispatch line: `"trigger":"dispatch: {Role} ({mode})","note":"base {sha}, stack {local | runner {NN} slot {x} | none}"`; report line: `"trigger":"report: {Role} {OUTCOME}","note":"{head sha}, {counts}"`. Model per dispatch: sdlc-dispatch §1 with the model key each step names. Narration (start.md): `{EPIC-ID} «{title}» — batch end: {stage}: {what happens, one clause}`. After a session restart, an epic whose `batch.stage` is set re-enters that stage's step from its start; a dispatch whose report never arrived is re-dispatched (recovery reference).
+Every other decision line below: this shape with `"trigger":"decision"` and its fixed note, verbatim (sdlc-state §7). Dispatch line: `"trigger":"dispatch: {Role} ({mode})","note":"base {sha}, stack {local | runner {NN} slot {x} | none}"`; report line: `"trigger":"report: {Role} {OUTCOME}","note":"{head sha}, {counts}"`. Model per dispatch: sdlc-dispatch §1 with the model key each step names. Narration: start.md's batch-end line, `⏭ {EPIC-ID} «{title}» batch {n}: {stage} — {what happens, one clause}`. After a session restart, an epic whose `batch.stage` is set re-enters that stage's step from its start; a dispatch whose report never arrived is re-dispatched (recovery reference).
 
 ## 0. Trigger — stage `null` → `triage`
 
@@ -30,11 +30,11 @@ jq -n --arg e "{EPIC-ID}" --slurpfile ep docs/state/epics.json --slurpfile ac do
 
 Decide what the batch fix carries before anything merges — so nothing found here lands after the gate.
 
-1. **Follow-ups.** Open count: `cat docs/issues/{EPIC-ID}-{slug}/followups.md 2>/dev/null | grep -c '^- \[ \]'`. A hygiene bug registered below → `batch.stage` = `null`; back to step 0.
+1. **Notes** (first — the follow-up rules below depend on them). Open count: `cat docs/reviews/{EPIC-ID}-notes.md 2>/dev/null | grep -c '^- \[ \] N-'`. Give every open line its default from the table.
+2. **Follow-ups.** Open count: `cat docs/issues/{EPIC-ID}-{slug}/followups.md 2>/dev/null | grep -c '^- \[ \]'`. A hygiene bug registered below → `batch.stage` = `null`; back to step 0.
    - `process.followups_gate` = `triage`: apply the triage table (sdlc-state §4, Follow-ups) to every open entry, acting now on two rows only — *gate-breaking or correctness, small* → the batch-fix list; *…, larger* → ONE hygiene bug (registration procedure in `commands/start.md`: title `hygiene: {EPIC-ID} follow-ups`, `origin: followups`, the record lists those FU lines). The other outcomes are written at step 6.
-   - `hygiene_bug` (absent = `hygiene_bug`): first resolve `→ FU-{m}` now the notes whose default below is a follow-up (step 6 formats; sdlc-state §4 Notes), so they count as open entries; then count > 0 → ONE hygiene bug for all open entries (sdlc-state §5).
-2. **Notes.** Open count: `cat docs/reviews/{EPIC-ID}-notes.md 2>/dev/null | grep -c '^- \[ \] N-'`. Give every open line its default from the table. The batch-fix list = the notes marked "batch fix" + the follow-ups from 1.
-3. Step 2 — its `batch end: main_in` line carries the extra key `"chosen":"{N-ids and FU-ids | none}"`; notes routed to the Architect → step 2b starts beside it.
+   - `hygiene_bug` (absent = `hygiene_bug`): first resolve `→ FU-{m}` now the notes whose default from 1 is a follow-up (step 6 formats; sdlc-state §4 Notes), so they count as open entries; then count > 0 → ONE hygiene bug for all open entries (sdlc-state §5).
+3. The batch-fix list = the notes marked "batch fix" + the follow-ups from 2. Step 2 — its `batch end: main_in` line carries the extra key `"chosen":"{N-ids and FU-ids | none}"`; notes routed to the Architect → step 2b starts beside it.
 
 | Category | At triage | Resolution written at step 6 |
 |---|---|---|
@@ -43,8 +43,8 @@ Decide what the batch fix carries before anything merges — so nothing found he
 | prose ({role}) | nothing | `→ FU-{m}`, owner `{role}` (that role's next dispatch closes it) |
 | rule gap (Architect) · rule text (Architect) | step 2b | ruled → `→ ruled ({ruling sha})`; the Architect's other outcomes as its skill's Notes-triage table says |
 | performance (later) | nothing | `→ FU-{m}` |
-| for the {EPIC-ID} merge | nothing | `→ carried to {EPIC-ID} as N-{k} (its next merge of main)` |
-| Architect ruling before {ITEM-ID} | not yet ruled and {ITEM-ID} not yet dispatched → a ruling now (`rulings.md`) | ruled → `→ ruled ({ruling sha})`; {ITEM-ID} in another epic, not ruled → `→ carried to {EPIC-ID} as N-{k} (before {ITEM-ID})` |
+| for the {EPIC-ID} merge | {EPIC-ID} = this epic (a note carried here) → batch fix, never carried again; another epic → nothing | this epic: as the first row; another epic → `→ carried to {EPIC-ID} as N-{k} (its next merge of main)` |
+| Architect ruling before {ITEM-ID} | not yet ruled and {ITEM-ID} in this epic (dispatched or not) → a ruling now (`rulings.md`) | ruled → `→ ruled ({ruling sha})`; {ITEM-ID} in another epic, not ruled → `→ carried to {EPIC-ID} as N-{k} (before {ITEM-ID})` |
 | planning (for {items}) | nothing | `→ FU-{m}`, owner = the epic holding {items}, else the next epic |
 
 *Default, not law: deviate only on concrete grounds, and record the rationale on the note line.*
@@ -53,7 +53,7 @@ Decide what the batch fix carries before anything merges — so nothing found he
 
 Precondition: Deploy exclusivity for target `{feature}` (sdlc-dispatch §2).
 
-1. Merge worktree — `git worktree list | grep -cF '/{EPIC-ID}-merge '` → `0` means missing: `git worktree add {merge} {feature}; echo "exit=$?"`, and register `"{EPIC-ID}-merge"` in `project.json.worktrees`.
+1. Merge worktree — `git worktree list | grep -cF '/{EPIC-ID}-merge '` → `0` means missing: `git worktree add {merge} {feature}; echo "exit=$?"`. Whenever `jq -r '.worktrees["{EPIC-ID}-merge"] // "missing"' docs/state/project.json` prints `missing` — the directory new or not — register `"{EPIC-ID}-merge"` in `project.json.worktrees` (sdlc-state §6).
 2. Dispatch Deploy — `briefs/deploy.md` "Deploy — main-in / feature-in (F5)", main-in; teammate `deploy-{EPIC-ID}`; model key `Deploy:main_in`; dispatch line `dispatch: Deploy (main in)`.
 3. Verified report → report line with `{main-in}` = its `merge:` SHA (`merge: none — already up to date` → `git -C {merge} rev-parse HEAD`). No status change (sdlc-state §4 Epic):
 
@@ -66,13 +66,14 @@ Precondition: Deploy exclusivity for target `{feature}` (sdlc-dispatch §2).
 
 | Situation | Action |
 |---|---|
+| A feature-in is due (`cross-epic.md` §2 — this epic carries another's feature) | after a MERGED main-in: run it now (cross-epic §2), still stage `main_in`; then `{main-in}` = the feature tip after it (`git -C {merge} rev-parse HEAD`) and go on as the MERGED row. After a VERIFICATION_FAILED main-in: run it after step 3's fast-forward, before step 4 |
 | `worktree add` fails: `{feature}` is checked out elsewhere | `git worktree list` names the holder: a finished item's worktree → `git worktree remove {path}`; an agent at work → wait |
 | Another merge into `{feature}` is in flight | queue it; decision `merge queued behind {ITEM-ID}'s` |
 | The report has no `merge:` line | message the same Deploy for it (sdlc-dispatch §3) |
 
 ## 2b. Architect notes triage — beside steps 2–3 (optional)
 
-When step 1 routed ≥ 1 note to the Architect: `git worktree add -b architect/{EPIC-ID}-notes {worktree_dir}/ARCH-{EPIC-ID}-notes main; echo "exit=$?"`; dispatch Architect — `briefs/planning.md` "Architect — batch-end notes triage" listing those N-ids, stackless, teammate `architect-{EPIC-ID}-notes`, dispatch line `dispatch: Architect (notes triage)`. On the verified report: check, merge, push and remove it exactly as a ruling (`rulings.md`, PM steps 4–8; no commit — nothing ruled — → only remove the worktree). Each note's outcome feeds step 6. Docs and rules only — step 5b counts nothing for it.
+When step 1 routed ≥ 1 note to the Architect: `git worktree add -b architect/{EPIC-ID}-notes {worktree_dir}/ARCH-{EPIC-ID}-notes main; echo "exit=$?"`; dispatch Architect — `briefs/planning.md` "Architect — batch-end notes triage" listing those N-ids, stackless, teammate `architect-{EPIC-ID}-notes`, dispatch line `dispatch: Architect (notes triage)`. On the verified report: check, merge, push, remove the worktree and delete the branch exactly as a ruling (`rulings.md`, PM steps 4–8; nothing ruled — `git rev-list --count main..architect/{EPIC-ID}-notes` prints `0` → step 7 only). Each note's outcome feeds step 6. Docs and rules only — step 5b counts nothing for it.
 
 ## 3. Batch fix — stage `batch_fix`
 
@@ -89,6 +90,8 @@ git -C {merge} push origin {feature}; echo "exit=$?"          # (remote only) pl
 git worktree remove {worktree_dir}/{EPIC-ID}-batch-fix; echo "exit=$?"
 git -C {merge} branch -d fix/{EPIC-ID}-batch; echo "exit=$?"
 git push origin --delete fix/{EPIC-ID}-batch; echo "exit=$?"  # (remote only; skip when never pushed)
+git -C {merge} branch -d {main-in fix branch}; echo "exit=$?"     # only after a VERIFICATION_FAILED main-in: the name Deploy reported
+git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only; skip when never pushed)
 ```
 
 | Situation | Action |
@@ -138,11 +141,11 @@ git diff --name-only {base} {main} -- . {excludes} > {reports}/{EPIC-ID}-regate.
 wc -l < {reports}/{EPIC-ID}-regate.paths
 ```
 
-Count A `0` → stage `books`; step 6. Count A > 0 → count B, the paths among them where `main` differs from the gated tree:
+Count A `0` → stage `books`; step 6. Count A > 0 → count B, the paths among them where `main` differs from the gated tree (both lists sorted by the same `sort`):
 
 ```bash
-xargs git diff --name-only {gated_sha} {main} -- < {reports}/{EPIC-ID}-regate.paths > {reports}/{EPIC-ID}-regate.differ; echo "exit=$?"
-wc -l < {reports}/{EPIC-ID}-regate.differ
+git diff --name-only {gated_sha} {main} -- . {excludes} > {reports}/{EPIC-ID}-regate.differ; echo "exit=$?"
+comm -12 <(sort {reports}/{EPIC-ID}-regate.paths) <(sort {reports}/{EPIC-ID}-regate.differ) | wc -l
 ```
 
 Count B `0` → `main` gained only code the feature already carries (a carried epic's delivery, `cross-epic.md`): decision `re-gate skipped: {A} code paths on main, all already on the feature`; stage `books`. Count B > 0 → stage `main_in`; step 2 again, then 3–4 (the re-gate's runs continue the `{N}` sequence). WHY: the gate must prove what will ship; documents, state and rules prove nothing the gate runs, and the delivery takes `main`'s side where they conflict (story-merge skill).
@@ -152,11 +155,11 @@ Count B `0` → `main` gained only code the feature already carries (a carried e
 Precondition: step 2b's Architect, if dispatched, has reported and its branch is merged.
 
 1. **Notes** — every open N-line gets exactly ONE resolution (sdlc-state §4 Notes), from the step-1 table and the verified batch-fix report (its DETAILS name the commit per note):
-   - `→ FU-{m}`: first append `- [ ] FU-{m} · {class} · instances: {file:line} · origin: {EPIC-ID} N-{n} · owner: {owner} · size: small` to followups.md (`m` = `counters.followup` + 1; no owner in the table → omit `· owner:`);
-   - carried: first append to `docs/reviews/{OTHER-EPIC-ID}-notes.md` (from `docs/templates/notes-file-template.md` if missing), under `## Carried from {EPIC-ID}`, the line `- [ ] N-{k} · {category} · {finding} (was {EPIC-ID} N-{n})` (`k` = `counters.note` + 1);
+   - `→ FU-{m}`: first append `- [ ] FU-{m} · {class} · instances: {file:line} · origin: {EPIC-ID} N-{n} · owner: {owner} · size: small` to followups.md (`m` = `counters.followup` + 1, written back to `project.json` per line; no owner in the table → omit `· owner:`);
+   - carried: first append to `docs/reviews/{OTHER-EPIC-ID}-notes.md` (from `docs/templates/notes-file-template.md` if missing), under `## Carried from {EPIC-ID}`, the line `- [ ] N-{k} · {category} · {finding} (was {EPIC-ID} N-{n})` (`k` = `counters.note` + 1, written back per line);
    - then rewrite the line as `- [x] N-{n} · … · **{resolution}**`. Check: `cat docs/reviews/{EPIC-ID}-notes.md 2>/dev/null | grep -c '^- \[ \] N-'` → `0`.
 2. **Follow-ups** per `process.followups_gate`: `triage` → write every open entry's outcome on its line (sdlc-state §4 triage table); one the batch fix closed → `- [x] FU-{n} · … — **closed by {EPIC-ID} batch fix ({sha}):** {how}`. `hygiene_bug` → the open count is `0`.
-3. Epic → `ready_for_deploy`, stage `delivery` (sdlc-state §5, row "`batch.stage` = `books`"): one log line, trigger `batch end`, `from` `in_progress`, `to` `ready_for_deploy`, note `batch end: delivery`; commit by path with every notes and follow-ups file written.
+3. Epic → `ready_for_deploy`, stage `delivery` (sdlc-state §5, row "`batch.stage` = `books`"): one log line, trigger `batch end`, `from` `in_progress`, `to` `ready_for_deploy`, note `batch end: delivery`; commit by path — `docs/state` (with `project.json`'s counters) and every notes and follow-ups file written.
 
 ## 7. Delivery — stage `delivery`
 
@@ -209,7 +212,7 @@ An epic with a `milestone`, in the same response as its `→ done` (after the ar
 *Default, not law: cut when a downstream epic needs this epic's first items (carried, or on `main`) before this epic can finish; deviate only on concrete grounds and record the rationale in the reason.* Never cut to reach a demo sooner.
 
 1. Members: every item of the epic already `done` (the feature holds their code) + the in-flight items chosen to finish.
-2. In one response: `batch` = `{"n": {current n, or 1}, "items": [{ids}], "stage": null, "gate_run": 0, "red_runs": 0, "gated_sha": null}`; decision `batch cut: {ids} — {reason}`; commit by path.
+2. In one response: no `batch`, or `batch.stage` = `null` → `batch` = `{"n": {current n, or 1}, "items": [{ids}], "stage": null, "gate_run": 0, "red_runs": 0, "gated_sha": null}`; `batch.stage` set (its batch end is running) → set `batch.items` only, never reset `stage`, `gate_run`, `red_runs` or `gated_sha`. Decision `batch cut: {ids} — {reason}`; commit by path.
 3. Items outside `batch.items` are not dispatched and not merged into the feature until the delivery; one already in flight finishes its dispatch and waits at its status. After the delivery, step 8: items left → epic `in_progress`, `batch` reset (sdlc-state §4, §5).
 
 ## Any step — Situation | Action
@@ -217,6 +220,7 @@ An epic with a `milestone`, in the same response as its `→ done` (after the ar
 | Situation | Action |
 |---|---|
 | A command that must print a SHA or a count prints nothing, or exits non-zero | red: stop the step, show the output, fix the input (state entry, report) or surface it — never proceed on silence |
+| `worktree add` fails: the path exists (a restart) | `git worktree list` first: the path is listed on the branch this step wants → reuse it; another branch, or not a worktree → surface to the user |
 | `worktree add -b` fails: the fix branch exists | `git merge-base --is-ancestor {branch} {feature}; echo "exit=$?"`: `exit=1` (this dispatch's unmerged work, after a restart) → `git worktree add {path} {branch}`; `exit=0` (a merged leftover) → `git -C {merge} branch -d {branch}`, then `-b` again |
 | A restart lost `{main-in}` | step 2 was MERGED → `git -C {merge} rev-parse HEAD`; VERIFICATION_FAILED → `git rev-parse fix/{EPIC-ID}-main-in` |
 
