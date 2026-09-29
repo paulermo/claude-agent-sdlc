@@ -73,7 +73,7 @@ EVIDENCE:
 - BRDs: {list of IDs + titles} | none
 - epics: {list} | none
 - content plans: {list} | none
-- milestone: slice {path} · whole {EPIC-IDs} · recut {EPIC-ID → NEW-EPIC-ID, …} · uncut {EPIC-IDs} | none
+- milestone: slice {path} · whole {EPIC-IDs} · recut {EPIC-ID → NEW-EPIC-ID, …} · uncut {ITEM-IDs} | none
 FILES:
 - {every file created or modified}
 BLOCKERS: {none | list}

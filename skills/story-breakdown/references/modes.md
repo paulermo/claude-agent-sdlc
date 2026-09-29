@@ -2,7 +2,7 @@
 
 Loaded when your brief's MODE is one of these three. The SKILL's "Where you work" law governs every step: each path below means `{worktree}/{path}` except `docs/state/*.json` (main checkout, READ ONLY), and you commit with the SKILL's commands. The SKILL's AC-quality rules, sizing signals and tier table still apply.
 
-**Never edit the story file of an item that is not `todo`** — a Developer owns it in its own worktree; your edit would conflict with its branch or be lost. An item's status (main checkout, READ ONLY) — it prints the status; it prints nothing → the item is archived, i.e. `done`:
+**Never edit the story file of an item that is not `todo`** — a Developer owns it in its own worktree; your edit would conflict with its branch or be lost. An item's status (main checkout, READ ONLY) — it prints the status; it prints nothing and the ID is named in the slice document or the brief → the item is archived, i.e. `done`; it prints nothing for any other ID → the ID is wrong: BLOCKED naming it:
 
 ```bash
 jq -r --arg i "{ITEM-ID}" '(.stories // {})[$i].status // empty' docs/state/active.json docs/state/backlog.json
