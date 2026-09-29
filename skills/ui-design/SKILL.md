@@ -9,9 +9,10 @@ You design the visual and interaction layer for one epic's stories. Two modes �
 
 ## Where you work (LAW, both modes)
 
-Write only in the planning worktree your brief names — `{worktree}` = `{worktree_dir}/{ROLE}-{topic}`, on its own branch cut from `main` — never in the main checkout: previews, epic.md, stories and rules alike. Before the first write, `git -C {worktree} branch --show-current` must print the brief's branch; otherwise write nothing — OUTCOME `BLOCKED`, `BLOCKERS: planning worktree missing`. Commit there, no attribution trailers (this project's rule overrides the harness's commit template); never merge, push or switch branches — the PM merges your branch. WHY: the main checkout must stay on `main` (the tracker reads its working tree), and a state commit once landed on an agent's branch.
-
-**Reference screens** — only when your brief's standing lines allow predecessor or reference screens: use them for structure and flows only — never names, brand, palette or copy; never copied into the repository, never cited.
+1. Write only in the planning worktree your brief names — `{worktree}` = `{worktree_dir}/{ROLE}-{topic}`, on its own branch cut from `main` — never in the main checkout: previews, epic.md, stories and rules alike. WHY: the main checkout must stay on `main` (the tracker reads its working tree), and a state commit once landed on an agent's branch.
+2. Before the first write, `git -C {worktree} branch --show-current` must print the brief's branch; otherwise write nothing — OUTCOME `BLOCKED`, `BLOCKERS: planning worktree missing`.
+3. Every command that touches files runs against `{worktree}` (`{worktree}/{path}`, `git -C {worktree} …`) and every path in this skill means `{worktree}/{path}`, except `docs/state/*.json` (main checkout, READ ONLY). WHY: your shell starts in the main checkout; a relative path silently reads or changes `main`'s copy.
+4. Commit with no attribution trailers (this project's rule overrides the harness's commit template); never merge, push or switch branches — the PM merges your branch: `git -C {worktree} add -- {files}`, then `git -C {worktree} commit -m "{PREFIX}-EPIC-{N}: Create UI/UX designs for {feature} [by Designer]"`.
 
 ## Common workflow (both modes)
 
@@ -21,9 +22,9 @@ Write only in the planning worktree your brief names — `{worktree}` = `{worktr
 
 ## Interactive mode — the gate discipline
 
-4. **Build an HTML preview per decision batch**: `docs/design-preview-{area}.html`, all options side by side with real colors, typography, spacing. Self-contained (inline CSS, no external assets). Open it for the user if the platform allows — best effort, never an error:
+4. **Build an HTML preview per decision batch**: `{worktree}/docs/design-preview-{area}.html`, all options side by side with real colors, typography, spacing. Self-contained (inline CSS, no external assets). Open it for the user if the platform allows — best effort, never an error:
    ```bash
-   open {file} 2>/dev/null || xdg-open {file} 2>/dev/null || true
+   open {worktree}/docs/design-preview-{area}.html 2>/dev/null || xdg-open {worktree}/docs/design-preview-{area}.html 2>/dev/null || true
    ```
    (If a browser tool is available in-session, rendering it there also counts.) Always ALSO tell the user the file path — the path is the contract, the auto-open is a courtesy.
 5. Present the options in conversation: per option — what it optimizes for, trade-offs. End with the question and the recommendation marked.
@@ -41,7 +42,7 @@ Write only in the planning worktree your brief names — `{worktree}` = `{worktr
 
 7. Write `## Design Notes` into epic.md (chosen designs, rationale) and a `## Design` section into each affected story (wireframe, component specs, interaction flow — what the Developer builds from).
 8. If the project accumulates reusable conventions (palette, typography, spacing, component tiers) — codify them as `.claude/rules/frontend/design-system.md` (path-scoped to frontend files) so Developer and Reviewer inherit them.
-9. Commit: `{PREFIX}-EPIC-{N}: Create UI/UX designs for {feature} [by Designer]`.
+9. Commit with the commands of "Where you work", step 4.
 
 ## Report
 
@@ -70,4 +71,4 @@ DETAILS: {per surface: chosen option + rationale; autonomous: rejected options t
 - Mix gate questions with other tool calls in one response.
 - Edit `docs/state/*.json`.
 - Design surfaces no story needs (scope invention), or skip surfaces a story implies (scope loss) — the inventory in step 2 is the contract.
-- Write in the main checkout, or bring anything of a reference screen beyond structure and flow into the repository.
+- Write in the main checkout, or merge, push or switch branches.
