@@ -66,7 +66,7 @@ Precondition: Deploy exclusivity for target `{feature}` (sdlc-dispatch §2).
 
 | Situation | Action |
 |---|---|
-| A feature-in is due (`cross-epic.md` §2 — this epic carries another's feature) | after a MERGED main-in: run it now (cross-epic §2), still stage `main_in`; then `{main-in}` = the feature tip after it (`git -C {merge} rev-parse HEAD`) and go on as the MERGED row. After a VERIFICATION_FAILED main-in: run it after step 3's fast-forward, before step 4 |
+| A feature-in is due (`cross-epic.md` §2 — this epic carries another's feature) | after a MERGED main-in: run it now (cross-epic §2), still stage `main_in`; then `{main-in}` = the feature tip after it (`git -C {merge} rev-parse HEAD`) and go on as the MERGED row. After a VERIFICATION_FAILED main-in: run it after step 3's fast-forward, before step 4 — `batch.stage` stays `batch_fix` until the feature-in is MERGED (a restart in that window re-runs it, never skips it) |
 | `worktree add` fails: `{feature}` is checked out elsewhere | `git worktree list` names the holder: a finished item's worktree → `git worktree remove {path}`; an agent at work → wait |
 | Another merge into `{feature}` is in flight | queue it; decision `merge queued behind {ITEM-ID}'s` |
 | The report has no `merge:` line | message the same Deploy for it (sdlc-dispatch §3) |
