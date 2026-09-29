@@ -29,6 +29,7 @@ WORKTREE: {worktree}, branch {branch}, cut from {feature-branch} at {base sha}. 
 - On the tree: {ITEM-IDs merged into the feature that this story builds on | none}.
 - Not on the tree: {ITEM-IDs this story meets at the merge — read, never build: `git show origin/{their branch} -- {path}` | none}.
 - Prior work: {a lost session's commits {a}..{b} and uncommitted {files} — inspect before you continue | none}.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the ruling line, when one applies: cherry-pick the ruling {sha} first — only that commit, never a full main merge: `git cherry-pick -x {sha}`} {facts from sibling items and reviews this story must respect — shared modules to meet, returned-for patterns | none}.
 
 INPUTS (in order):
@@ -54,7 +55,7 @@ DELIVERABLE: implementation + tests, the targeted set green, story checkboxes ti
 
 VERIFICATION: I will check your commits on origin/{branch} (`[by Developer]`, attribution-trailer count 0 over {base sha}..HEAD); no `docs/state/` path in your diff; EVIDENCE: the red run, then a count and an exit code for every targeted command with its `selected because` reason; checkboxes against reality; the `stack:` line (runner steps read through `run-step wait`, naming the slot).
 
-REPORT: the envelope from your skill (sdlc-state section 3), OUTCOME: IMPLEMENTED | BLOCKED, the whole message under {cap} characters. DETAILS: one OUT OF SCOPE line per defect noticed but not fixed. After 4–5 tasks, or a compacted context: commit, push, OUTCOME: BLOCKED with `CONTINUE: next task = …` (skill section 3b).
+REPORT: the envelope from your skill (sdlc-state section 3), OUTCOME: IMPLEMENTED | BLOCKED, the whole message under {cap} characters. DETAILS: one OUT OF SCOPE line per defect noticed but not fixed. After 5 tasks, or a compacted context: commit, push, OUTCOME: BLOCKED with `CONTINUE: next task = …` (skill section 3b).
 ```
 
 ## Developer — story (first dispatch) (classic lane)
@@ -67,6 +68,7 @@ WHY: {one sentence: what this story delivers to the user}.
 KIND: story · TIER: {tier} · LANE: classic
 WORKTREE: {worktree}, branch {branch}, cut from {feature-branch} at {base sha}. Work ONLY there.
 - Prior work: {a lost session's commits {a}..{b} and uncommitted {files} — inspect before you continue | none}.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the ruling line, when one applies: cherry-pick the ruling {sha} first — only that commit, never a full main merge: `git cherry-pick -x {sha}`} {facts from sibling items and reviews this story must respect | none}.
 
 INPUTS (read in this order):
@@ -103,6 +105,7 @@ WHY: {one clause: the top blocking finding}.
 
 KIND: {kind} · TIER: {tier} · LANE: fast · RETURNS: 1 of 1
 WORKTREE: {worktree}, branch {branch}, PRIOR HEAD {head sha} (pushed). Work ONLY there. Do not merge the feature in — my merge handles that.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the ruling line, when a finding waits on one: cherry-pick the ruling {sha} first — only that commit, never a full main merge: `git cherry-pick -x {sha}` | none}.
 
 INPUTS:
@@ -138,6 +141,7 @@ WHY: {one clause: the top blocking finding}.
 
 KIND: {kind} · TIER: {tier} · LANE: classic
 WORKTREE: {worktree}, branch {branch}, head {head sha}. Work ONLY there; your prior work is already committed here.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 
 INPUTS:
 1. FEEDBACK: {feedback-file} — read it FIRST; fix every Mandatory and Important-blocking finding; Follow-ups only in files you change anyway.
@@ -172,6 +176,7 @@ WHY: {one clause: what is broken and for whom}.
 KIND: bug · TIER: {tier} · LANE: {fast | classic} · BUDGET: 1 return
 WORKTREE: {worktree}, branch {branch}, cut from {feature-branch} at {base sha}. Work ONLY there.
 - Prior work: {a lost session's commits {a}..{b} and uncommitted {files} — inspect before you continue | none}.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the ruling line, when one applies: cherry-pick the ruling {sha} first — only that commit, never a full main merge: `git cherry-pick -x {sha}` | none}.
 
 INPUTS:
@@ -207,7 +212,8 @@ Merge fix for {ITEM-ID} against {EPIC-ID}'s feature — not a story, not a bug: 
 WHY: {what Deploy's merge showed — the collision, e.g. a caller left on a changed signature, a test double missing a new method}.
 
 KIND: {kind} · TIER: {tier} · LANE: fast
-WORKTREE: {{worktree_dir}/{ITEM-ID}-merge-fix, branch fix/{ITEM-ID}-merge at {resolved merge sha} | {worktree}, branch {branch} at {head sha} — merge `origin/{feature-branch}` at {feature sha} into it first}. Work ONLY there.
+WORKTREE: {{worktree_dir}/{ITEM-ID}-merge-fix, branch {fix branch} — exactly as Deploy's report names it (fix/{ITEM-ID}-merge or fix/{ITEM-ID}-merge-{k}) — at {resolved merge sha} | {worktree}, branch {branch} at {head sha} — merge `origin/{feature-branch}` at {feature sha} into it first}. Work ONLY there.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {Deploy's failures, grouped by cause: failing command → first message line; the files each side changed}.
 
 INPUTS: {the failure log Deploy's DETAILS names under {reports}/ | none}; `.claude/rules/quality-gate.md` §Per story and §Review and merge; the files the failures name; the rules they touch, by section. Grep large files; never cat generated clients or API snapshots.
@@ -239,6 +245,7 @@ WHY: Every item of batch {n} is merged and main is merged in at {main-in sha}; {
 
 KIND: batch fix · EPIC: {EPIC-ID} · LANE: fast
 WORKTREE: {worktree_dir}/{EPIC-ID}-batch-fix, branch fix/{EPIC-ID}-batch at {main-in sha} — your base; the feature stays at {feature sha} until you are green. Work ONLY there.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: PART 1 — {Deploy's failures by cause: failing command → first message line | none}; {another epic's fix for the same meeting defect: cherry-pick it first, `git cherry-pick -x {sha}`; if it does not apply cleanly, make the same change by hand: {what} | no cherry-pick}. PART 2 — {the merge decision to confirm | none}.
 
 INPUTS:
@@ -267,15 +274,16 @@ REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: IMPLEMENTED | B
 ## Developer — fix loop (F11)
 
 ```text
-Fix loop for {EPIC-ID}'s full gate, run {N}: step {step} went red at {run sha} — not a story, not a bug, no review.
+Fix loop for {EPIC-ID} batch {n}, full-gate run {N}: step {step} went red at {run sha} — not a story, not a bug, no review.
 
 WHY: {the red step's command and its first failure line}.
 
-KIND: fix loop · EPIC: {EPIC-ID} · LANE: fast · RUN: {N}
+KIND: fix loop · EPIC: {EPIC-ID} · BATCH: {n} · LANE: fast · RUN: {N}
 WORKTREE: {worktree_dir}/{EPIC-ID}-gate-run{N}, branch fix/{EPIC-ID}-gate-run{N} from {run sha}. Work ONLY there.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the constraint on the fix, e.g. "make the test deterministic; prove it stable across repeated runs" | none}.
 
-INPUTS: docs/reports/{EPIC-ID}-batch-gate-run{N}.md — the failing step, its output lines, the reproduction; `.claude/rules/quality-gate.md` §Batch end; the rules the failure touches, by section.
+INPUTS: docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md — the failing step, its output lines, the reproduction; `.claude/rules/quality-gate.md` §Batch end; the rules the failure touches, by section.
 Do NOT read: stories, reviews, the notes file.
 
 SELECTION / CHECKS: red first — {the failing command, narrowed to the failing test(s)} on your tree, quoted. Search for other instances of the class. Then: {the failing test(s) and their area: the §Per story commands}; whole static analysis if code changed: {the §Review and merge command}. Never the full suite — QA re-runs the gate from the failed step.
@@ -305,6 +313,7 @@ WHY: {The previous session stopped at a task boundary and named the next task | 
 KIND: {kind | batch fix | fix loop} · TIER: {tier | none} · LANE: {fast | classic}
 CONTINUE: {the previous report's CONTINUE line, verbatim | none — replaced session: the first open task of the checklist}
 WORKTREE: {worktree}, branch {branch}, head {head sha}. Uncommitted edits left by the previous session: {files | none}. Work ONLY there.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {planned hand-off: the previous report's BLOCKERS / DETAILS lines this session must respect, or none | replaced session, verbatim: The previous session ran out of context; UNCOMMITTED edits exist in {files}: read `git diff` of those first; keep what is sound, revert what is not. Never cat large or generated files — grep and tail them.}
 
 INPUTS: {the INPUTS slot of the original brief, copied — NARROW: only the files the remaining tasks need}.
@@ -313,7 +322,7 @@ SELECTION / CHECKS: {the SELECTION / CHECKS slot of the original brief, copied}.
 STACK: {none | local — COMPOSE_PROJECT_NAME={item-id-lower} APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to {head sha}}.
 
 DISCIPLINE:
-- FIRST, before any new work (story-implementation section 3b, step 5): `git -C {worktree} status --porcelain`; inspect uncommitted changes (`git diff --stat`, then per file); keep what belongs to a named task and passes the formatter and linter, revert the rest per file (`git restore -- {path}`); commit the kept files as `{ITEM-ID or EPIC-ID}: Checkpoint of the previous session's work [by Developer]` and push. Never `git reset --hard`, `git clean` or `git stash`.
+- FIRST, before any new work (story-implementation section 3b, step 5): `git -C {worktree} status --porcelain`; inspect modified files (`git diff --stat`, then per file) and read each untracked (`??`) file by section; keep what belongs to a named task and passes the changed-files static checks of §Per story step 4 (no §Per story: the Format and Lint rows); drop the rest — `git restore -- {path}` (modified) or `rm -- {path}` (untracked), each listed in DETAILS; commit the kept files as `{ITEM-ID or EPIC-ID}: Checkpoint of the previous session's work [by Developer]` and push. Never `git reset --hard`, `git clean` or `git stash`.
 - Then resume at the CONTINUE task; the rest of your workflow is the preloaded story-implementation skill, {the original dispatch's path or section}.
 - Do not re-read rule files already in your context; read large files by section. Evidence per `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/evidence-and-shell.md`.
 - Never edit `docs/state/*.json`, a notes file, a follow-ups file or a bug record.
@@ -330,12 +339,13 @@ REPORT: {the REPORT slot of the original brief, copied} — the whole message un
 ## Developer — demo preparation
 
 ```text
-Prepare the demo of {MS-ID | EPIC-ID}: {title}, on main at {main sha} — not a story: you change no code and commit nothing.
+Demo preparation for {MS-ID | EPIC-ID}: {title}, on main at {main sha} — not a story: you change no code and commit nothing.
 
 WHY: The user asked for a prepared demo of {MS-ID | EPIC-ID}; the environment, the data and a runbook must let the user run it without help.
 
 KIND: demo preparation · {MILESTONE: {MS-ID} | EPIC: {EPIC-ID}}
 WORKTREE: {worktree_dir}/{MS-ID | EPIC-ID}-demo, detached at {main sha} (I created it). Read-only for code: no source edits, no commits.
+REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {the demo steps as the user stated them, when no slice document holds them | none}.
 
 INPUTS: {docs/reports/demo-slice-{K}.md — `## The demo` and `## The demo's local configuration` | the epic's story files: {paths}}; `.claude/rules/quality-gate.md` §How the full gate runs (the stack precondition).

@@ -1,6 +1,6 @@
 # Brief templates — content roles
 
-Copy the template for the dispatch, fill every `{placeholder}`, and send the result as the agent's task prompt — never a freehand brief (sdlc-dispatch section 1, brief slots and the cap). Content epics always follow the classic lane (sdlc-state section 4, Lanes), so these templates carry no lane variants. Slots run in one order — `WHY` · `KIND / TIER / ROUND` · `WORKTREE` · `INPUTS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` — and a slot a template lacks does not apply to it. Only `WHY` (≤ 2 sentences) is free text; every other value is a path, an ID, a SHA, a number, a command copied from `.claude/rules/quality-gate.md`, or `none` — write `none` rather than deleting a line, and keep the one alternative of each `{a | b}` that applies. `{cap}` = `process.report_max_chars` (absent: 3500). `{standing lines}` = the lines of `process.standing_brief_lines.all`, then of `process.standing_brief_lines["{Role}"]` (`Content Creator`, `Content Reviewer`, `Content Integrator`), one per line, or nothing — outside the brief cap. `{worktree}`, `{branch}`, `{app}`, `{db}` and the stack come from the task's `project.json` worktrees entry; `{feedback-file}` = the path in the task's feedback field — the agent reads it, never paste its text. `DISCIPLINE` names the skill a teammate loads with the Skill tool when its `skills:` frontmatter is not applied — never strip it.
+Copy the template for the dispatch, fill every `{placeholder}`, and send the result as the agent's task prompt — never a freehand brief (sdlc-dispatch section 1, brief slots and the cap). Content epics always follow the classic lane (sdlc-state section 4, Lanes), so these templates carry no lane variants. Slots run in one order — `WHY` · `KIND / TIER / ROUND` · `WORKTREE` · `INPUTS` · `STACK` · `DISCIPLINE` · `DELIVERABLE` · `VERIFICATION` · `REPORT` — and a slot a template lacks does not apply to it. Only `WHY` (≤ 2 sentences) is free text; every other value is a path, an ID, a SHA, a number, a command copied from `.claude/rules/quality-gate.md`, or `none` — write `none` rather than deleting a line, and keep the one alternative of each `{a | b}` that applies. `{cap}` = `process.report_max_chars` (absent: 3500). `{standing lines}` = the lines of `process.standing_brief_lines.all`, then of `process.standing_brief_lines["{Role}"]` (`Content Creator`, `Content Reviewer`, `Content Integrator`), one per line, or nothing — outside the brief cap. `{reports}` = the ABSOLUTE path of `{worktree_dir}/.reports` in the main checkout. `{worktree}`, `{branch}`, `{app}`, `{db}` and the stack come from the task's `project.json` worktrees entry; `{feedback-file}` = the path in the task's feedback field — the agent reads it, never paste its text. `DISCIPLINE` names the skill a teammate loads with the Skill tool when its `skills:` frontmatter is not applied — never strip it.
 
 | Template | Lane | Use when |
 |---|---|---|
@@ -20,6 +20,7 @@ WHY: {what this content serves in the product}.
 KIND: content task · ROUND: {returns + 1}
 PRIOR FEEDBACK: {rework: read {feedback-file} and fix ALL of it | none}
 WORKTREE: {worktree}, branch {branch}. Work ONLY there.
+REPORTS: {reports} — your logs go here, outside every worktree.
 
 INPUTS: {worktree}/docs/issues/{CEPIC-ID}-{slug}/{CTASK-ID}-{slug}.md, the content plan docs/requirements/content-plan/{CP-ID}-{slug}.md, content/ conventions from your skill.
 
@@ -70,6 +71,7 @@ WHY: {what this content serves in the product} — users see it only once it is 
 KIND: content task · ROUND: {returns + 1}
 PRIOR FEEDBACK (rejection_reason was "integration"): {rework: read {feedback-file} and fix ALL of it | none}
 WORKTREE: {worktree}, branch {branch}. Work ONLY there.
+REPORTS: {reports} — your logs go here, outside every worktree.
 
 INPUTS: approved content files under content/, the content task file (target locations), .claude/rules/quality-gate.md.
 

@@ -21,6 +21,7 @@ WHY: {ITEM-ID} is reviewed{ and its fix pass verified} (docs/reviews/{ITEM-ID}-1
 
 KIND: {kind} · TIER: {tier} · LANE: fast
 WORKTREE: {worktree_dir}/{EPIC-ID}-merge, on {feature-branch} at {feature sha}, clean. Work ONLY there; the main checkout stays on main.
+REPORTS: {reports} — your logs go here, outside every worktree.
 CARRIED IN: {the trial-merge result; what both sides touched that must be proven on the merged tree | none}.
 
 INPUTS: `.claude/rules/quality-gate.md` §Review and merge, §Per story, §Whole-tree checks; docs/state/active.json (READ ONLY — branch names).
@@ -30,7 +31,7 @@ SELECTION / CHECKS — merge per your skill's fast-lane protocol, verify per its
 - Combination checks: {registries and service definitions that must hold both sides' entries; migration order with the latest as head | none}.
 - Tests: {the §Per story commands for the item's modules and the consumers of shared code both sides changed | none — your skill's default selection}.
 - Whole static analysis: {the §Review and merge command}. Changed whole-tree scanners: {checks | none}. Replay: {command | none}. Content guard: {command | none}.
-- Push per process.deploy_push = {deploy_push}. Red: the merge goes to fix/{ITEM-ID}-merge, never to the feature; do not patch code.
+- Push per process.deploy_push = {deploy_push}. Red: the merge goes to fix/{ITEM-ID}-merge, or the next free `-{k}` (your skill's Red procedure), never to the feature; do not patch code.
 STACK: {none | local — COMPOSE_PROJECT_NAME={epic-id-lower}-merge APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to the merge}.
 
 DISCIPLINE:
@@ -41,7 +42,7 @@ DISCIPLINE:
 - Commit the merge as `{PREFIX}: Merge {ITEM-ID} into {EPIC-ID} [by Deploy]`. A hook denies attribution trailers; this project's rule overrides the harness's commit template. Push plainly; never force-push, never skip hooks.
 {standing lines}
 
-DELIVERABLE: the merge commit — on {feature-branch} when green, on fix/{ITEM-ID}-merge when red — and the report.
+DELIVERABLE: the merge commit — on {feature-branch} when green, on fix/{ITEM-ID}-merge (or the next free `-{k}`) when red — and the report.
 
 VERIFICATION: I will check the merge commit where your report puts it (`git ls-remote origin {ref}`; no remote: the local ref), its message, attribution-trailer count 0; EVIDENCE: the tree-identity line, ancestry both ways (each exit code on its own line), static-analysis lines, test counts, the marker count, the `stack:` line when STACK names a runner.
 
@@ -57,6 +58,7 @@ WHY: {QA passed | review passed (standard bug) | gate passed (light item)}; inte
 
 KIND: {kind} · TIER: {tier} · LANE: classic
 WORKTREE: {worktree_dir}/{EPIC-ID}-merge (I created it on {feature-branch}, at {feature sha}). Work ONLY there.
+REPORTS: {reports} — your logs go here, outside every worktree.
 
 INPUTS: .claude/rules/quality-gate.md, docs/state/active.json (READ ONLY — for branch names).
 
@@ -72,7 +74,7 @@ DISCIPLINE:
 
 VERIFICATION: I will check the merge commit exists on {feature-branch} (attribution-trailer count 0) and EVIDENCE carries each quality-gate command's result after the merge.
 
-REPORT: the envelope from your skill, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED, under {cap} characters. EVIDENCE: quality-gate results after merge; conflicts resolved (files + strategy). A VERIFICATION_FAILED becomes a bug I register — DETAILS must carry the failing output.
+REPORT: the envelope from your skill, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED | BLOCKED (a dirty or moved target: `not started: {why}` in BLOCKERS — never MERGE_FAILED), under {cap} characters. EVIDENCE: quality-gate results after merge; conflicts resolved (files + strategy). A VERIFICATION_FAILED becomes a bug I register — DETAILS must carry the failing output.
 ```
 
 ## Deploy — main-in / feature-in (F5)
@@ -84,6 +86,7 @@ WHY: {Every item of batch {n} is done, and since {EPIC-ID} last took main, main 
 
 KIND: {main-in | feature-in} · EPIC: {EPIC-ID} · LANE: fast
 WORKTREE: {worktree_dir}/{EPIC-ID}-merge, on {feature-branch} at {feature sha}, clean. Work ONLY there; the main checkout stays on main.
+REPORTS: {reports} — your logs go here, outside every worktree.
 CARRIED IN: {the trial merge: {k} conflicts — file → what to combine; a ruling to respect in a combination | none}.
 
 INPUTS: `.claude/rules/quality-gate.md` §Batch end, §Review and merge, §Per story, §Whole-tree checks.
@@ -92,7 +95,7 @@ SELECTION / CHECKS — merge per your skill's fast-lane protocol, verify per its
 - Generated files to regenerate: {file — generator command | none}. Combination checks: {registries, service definitions, migration order | none}.
 - Tests: {the §Per story commands over the modules both sides touched | none — your skill's default selection}.
 - Whole static analysis: {the §Review and merge command}. Replay: {command | none}. Contract and drift rows: {commands | none}. Content guard: {command | none}.
-- Push per process.deploy_push = {deploy_push}. Red: the merge goes to {fix/{EPIC-ID}-main-in | fix/{EPIC-ID}-{OTHER-EPIC-ID}-in}, never to the feature; do not patch code.
+- Push per process.deploy_push = {deploy_push}. Red: the merge goes to {fix/{EPIC-ID}-main-in | fix/{EPIC-ID}-{OTHER-EPIC-ID}-in}, or the next free `-{k}` (your skill's Red procedure), never to the feature; do not patch code.
 STACK: {none | local — COMPOSE_PROJECT_NAME={epic-id-lower}-merge APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to the merge}.
 
 DISCIPLINE:
@@ -115,15 +118,16 @@ REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: MERGED | MERGE_
 ```text
 Delivery: {feature-branch} at {gated sha} into main, for {EPIC-ID} batch {n}{ — milestone {MS-ID}}.
 
-WHY: The batch's full gate passed run {N} on {gated sha}, with main merged in (docs/reports/{EPIC-ID}-batch-gate.md); since then main gained {only documents and state | nothing}.
+WHY: The batch's full gate passed run {N} on {gated sha}, with main merged in (docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md); since then main gained {only documents and state | nothing}.
 
 KIND: delivery · EPIC: {EPIC-ID} · BATCH: {n} · LANE: fast
 WORKTREE: none yet — create the temporary detached worktree {worktree_dir}/{EPIC-ID}-delivery from a fresh origin/main (your skill's Delivery, step 1); never the main checkout. I hold my own pushes to main while you work.
+REPORTS: {reports} — the message file and your logs go here, outside every worktree.
 - Keep {worktree_dir}/{EPIC-ID}-merge after MERGED: {yes — items of the epic remain for batch {n + 1} | no}.
 
 INPUTS — the message sources; read them, never edit them, never add text they do not hold:
 1. docs/templates/delivery-commit-template.md — the format, and how each part is filled
-2. docs/reports/{EPIC-ID}-batch-gate.md — the PASSED gate report: the test-plan numbers, copied, never re-measured
+2. the gate report of the run whose SHA is {gated sha}: docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md — the test-plan numbers, copied, never re-measured
 3. the batch's items: {ITEM-IDs} — their story files and bug records under docs/issues/{EPIC-ID}-{slug}/
 4. docs/reviews/{EPIC-ID}-notes.md — the lines resolved "→ fixed in the batch" | none
 5. docs/issues/{EPIC-ID}-{slug}/followups.md — the open FU IDs, IDs only | none
@@ -158,7 +162,8 @@ Epic merge (classic lane): {feature-branch} into main for {EPIC-ID}.
 WHY: every story and bug done, follow-ups handled per process.followups_gate; ship the epic.
 
 KIND: epic merge · EPIC: {EPIC-ID} · LANE: classic
-WORKTREE: the main working copy (I am pausing all other dispatches until you finish). Confirm `git status` is clean and branch is main before starting; abort with OUTCOME: MERGE_FAILED if not.
+WORKTREE: the main working copy (I am pausing all other dispatches until you finish). Confirm `git status` is clean and branch is main before starting; if not, touch nothing: OUTCOME: BLOCKED with `not started: {the actual output}` in BLOCKERS — never MERGE_FAILED.
+REPORTS: {reports} — your logs go here, outside every worktree.
 
 INPUTS: .claude/rules/quality-gate.md, docs/state/active.json (READ ONLY — for branch names).
 
@@ -174,5 +179,5 @@ DISCIPLINE:
 
 VERIFICATION: I will check the merge commit on main (attribution-trailer count 0) and EVIDENCE carries each quality-gate command's result after the merge.
 
-REPORT: the envelope from your skill, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED, under {cap} characters.
+REPORT: the envelope from your skill, OUTCOME: MERGED | MERGE_FAILED | VERIFICATION_FAILED | BLOCKED, under {cap} characters.
 ```

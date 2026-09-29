@@ -18,11 +18,12 @@ Batch gate: the full gate for {EPIC-ID} batch {n} on {feature-branch} at {sha}, 
 WHY: Every item of batch {n} is done ({ITEM-IDs}); main is merged in at {main-in sha}{, the batch fix is on top at {batch-fix sha}}. Nothing reaches main without the full gate.
 
 KIND: batch gate · EPIC: {EPIC-ID} · LANE: fast · RUN: {N}
-RE-RUN: {restart from the failed step {step} of run {N-1}; previous report: docs/reports/{EPIC-ID}-batch-gate-run{N-1}.md | none — a first run or a re-gate: every step}
+RE-RUN: {restart from the failed step {step} of run {N-1}; previous report: docs/reports/{EPIC-ID}-batch{n}-gate-run{N-1}.md | none — a first run or a re-gate: every step}
 WORKTREE: {worktree_dir}/{EPIC-ID}-merge at {sha}, clean — not a story worktree; the main checkout stays on main. You write no code, no tests, no commits.
+REPORTS: {reports} — your logs and the REPORT FILE go here, outside every worktree.
 CARRIED IN: LESSONS: {defect classes seen in recent gates, e.g. "tests from main still calling a changed signature", "a flaky counter test" | none}.
 
-INPUTS: `.claude/rules/quality-gate.md` (§How the full gate runs, Step 0, the path-to-command table, §Whole-tree checks, §Batch end); docs/templates/batch-gate-report-template.md; the precedent report: {docs/reports/{EPIC-ID}-batch-gate.md of an earlier batch or epic | none}.
+INPUTS: `.claude/rules/quality-gate.md` (§How the full gate runs, Step 0, the path-to-command table, §Whole-tree checks, §Batch end); docs/templates/batch-gate-report-template.md; the precedent report: {docs/reports/{EPIC-ID}-batch{m}-gate-run{k}.md — an earlier PASSED run, of this epic or another | none}.
 Do NOT read: story files, use cases, reviews, the notes file.
 
 SELECTION / CHECKS:
@@ -30,7 +31,7 @@ SELECTION / CHECKS:
 - EXTRA, not a gate step: {a suite whose subject changed | none} — quote its exit code, labelled extra.
 - LAYOUT: phase 1, no stack: {content guard | none}; {stackless rows | none}; the merge-artefact scan. Phase 2, with the stack: {precondition | none}, then {the remaining rows, in table order}.
 - Pre-test cleanups: {each cleanup, confirmed by a listing or a count | none}. Spot-checks: {areas | none requested}.
-STACK: {local — COMPOSE_PROJECT_NAME={epic-id-lower}-merge APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to {sha} — leave the stack {up | down}}.
+STACK: {none — no selected row needs a stack | local — COMPOSE_PROJECT_NAME={epic-id-lower}-merge APP_PORT={app} DB_PORT={db} | runner {NN} slot {x}, set to {sha} — leave the stack {up | down}}.
 
 DISCIPLINE:
 - Your workflow is the preloaded story-qa skill, Batch gate mode — one step at a time, each exit code on its own line, counts quoted; an engine-dependent test skipped after the stack is up is red.
@@ -39,11 +40,11 @@ DISCIPLINE:
 - Never edit `docs/state/*.json`, a notes file, a follow-ups file or a bug record.
 {standing lines}
 
-DELIVERABLE: the gate report in the batch-gate report template's format, written to the REPORT FILE. I save it as docs/reports/{EPIC-ID}-batch-gate.md (PASSED), …-batch-gate-run{N}.md (FAILED) or …-batch-gate-regate.md (a PASSED re-gate).
+DELIVERABLE: the gate report in the batch-gate report template's format, written to the REPORT FILE. I save it as docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md — every run, PASSED or FAILED.
 
 VERIFICATION: I will check the REPORT FILE is present and non-empty; its run is on {sha}; EVIDENCE: the `rows:` and `tree:` lines, then one line per step in order, each with its count or exit code ("not run" after a red step); runner steps read through `run-step wait`, naming the slot, when STACK names one.
 
-REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: PASSED | FAILED | BLOCKED, REPORT FILE: {reports}/{EPIC-ID}-batch-gate.md, the whole message under {cap} characters.
+REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: PASSED | FAILED | BLOCKED, REPORT FILE: {reports}/{EPIC-ID}-batch{n}-gate-run{N}.md, the whole message under {cap} characters.
 ```
 
 ## QA — standard mode (classic lane)
@@ -56,6 +57,7 @@ WHY: verify the item's acceptance criteria end-to-end before merge.
 KIND: {kind} · TIER: {tier} · LANE: classic{ — normally not QA'd; dispatched because: {one clause} (a light story, a light or standard bug)}
 PRIOR QA FEEDBACK: {re-test: read {feedback-file} — verify every item in it is fixed; re-test the delta and the flows it touches | none}
 WORKTREE: {worktree}, head {head sha}.
+REPORTS: {reports} — your logs go here, outside the worktree.
 
 INPUTS: {story: {worktree}/docs/issues/{EPIC-ID}-{slug}/{STORY-ID}-{slug}.md (acceptance criteria) + its use case (flows) | bug: the bug record {record path}}, .claude/rules/quality-gate.md, docs/state/environments.json if E2E against a deployed env is configured.
 
@@ -84,6 +86,7 @@ WHY: prove the merge broke nothing before advancing.
 
 KIND: {regression (story) · TIER: {tier} · LANE: classic | regression (epic, on main) · EPIC: {EPIC-ID} · LANE: {fast | classic}{ — dispatched per process.main_regression: {value}, {count} code paths{; override: {reason}}}}
 WORKTREE: {story: the merge worktree {worktree_dir}/{EPIC-ID}-merge at {sha} | epic: {worktree_dir}/{EPIC-ID}-main-regression, detached at main's tip {main sha} — a temporary worktree I created; never the main working copy} — NOT a story worktree.
+REPORTS: {reports} — your logs go here, outside every worktree.
 
 INPUTS: .claude/rules/quality-gate.md (FULL suite commands), the merged item's acceptance criteria (spot-check list): {story file | bug record {record path}}; for an epic: every story file and bug record under docs/issues/{EPIC-ID}-{slug}/.
 

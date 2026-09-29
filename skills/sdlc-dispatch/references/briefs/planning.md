@@ -33,6 +33,7 @@ WHY: The project has no BRDs yet. Your BRDs and epics become the backbone every 
 
 MODE: Initial planning
 WORKTREE: {worktree_dir}/PRODUCT-initial, branch product/initial, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS (read in this order):
 1. docs/project.md — the product description
@@ -63,6 +64,7 @@ WHY: {EPIC-ID} ({title}) just shipped. Delivered scope may change priorities or 
 
 MODE: Refinement
 WORKTREE: {worktree_dir}/PRODUCT-{EPIC-ID}-refine, branch product/{EPIC-ID}-refine, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 CARRIED IN: {user feedback or the Architect's NEEDS_REQUIREMENTS_FIX defects, quoted | none}.
 
 INPUTS: docs/issues/{EPIC-ID}-{slug}/epic.md (+ story list), docs/state/epics.json (main checkout, READ ONLY), docs/requirements/ BRDs.
@@ -90,6 +92,7 @@ WHY: The user defined {MS-ID}; its demo must be planned as whole epics before it
 
 MODE: Milestone
 WORKTREE: {worktree_dir}/PRODUCT-{MS-ID}, branch product/{MS-ID}, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 CARRIED IN: the user's words, verbatim — title: {title}; goal / demo: {goal}; target: {YYYY-MM-DD | none}.
 
 INPUTS:
@@ -123,6 +126,7 @@ WHY: {EPIC-IDs} give {MS-ID} some but not all of their items; a milestone is del
 
 MODE: Milestone recut
 WORKTREE: {worktree_dir}/PRODUCT-{MS-ID}-recut, branch product/{MS-ID}-recut, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS:
 - The milestone part per epic: {docs/reports/demo-slice-{K}.md, `## Placement` | {EPIC-ID}: {ITEM-IDs}; …}.
@@ -153,6 +157,7 @@ WHY: {one sentence from the epic — what the feature delivers}.
 
 MODE: Breakdown
 WORKTREE: {worktree_dir}/ANALYST-{EPIC-ID}, branch analyst/{EPIC-ID}, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: docs/requirements/{BRD-ID}-{slug}.md, docs/issues/{EPIC-ID}-{slug}/epic.md, docs/templates/use-case-template.md + story-template.md (+ content-task-template.md for content epics), docs/state/project.json for prefix/counters (main checkout, READ ONLY).
 Do NOT read: other epics' stories.
@@ -180,6 +185,7 @@ WHY: {MS-ID}'s demo items need capabilities from items outside the slice; each m
 
 MODE: Milestone slice
 WORKTREE: {worktree_dir}/ANALYST-{MS-ID}, branch analyst/{MS-ID}, cut from main at {base sha} — it holds docs/reports/demo-slice-{K}.md: {yes | no}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 CARRIED IN: {the demo steps, when no slice document exists yet | none}.
 
 INPUTS: {docs/reports/demo-slice-{K}.md | the demo steps above}; prerequisites: {prerequisite — consuming {ITEM-ID} ← providing {ITEM-ID}; … | those the slice document lists}; their story files; docs/glossary.md.
@@ -208,6 +214,7 @@ WHY: Design Mode for {EPIC-ID} changed these stories; a story that disagrees wit
 
 MODE: Amendment pass
 WORKTREE: {worktree_dir}/ANALYST-{EPIC-ID}-amend, branch analyst/{EPIC-ID}-amend, cut from main at {base sha} (the design merged at {design merge sha}). Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 CARRIED IN: {the Architect's DETAILS lines naming story and tier changes | none}.
 
 INPUTS: the listed stories: {story file paths}; the use cases they reference; the design's changes: `git diff {design merge sha}^1 {design merge sha} -- docs/issues/{EPIC-ID}-{slug}/`; {ADR paths | none}.
@@ -236,6 +243,7 @@ WHY: The Architect's ruling on {question id} needs new scope that no existing st
 
 MODE: One story from a ruling
 WORKTREE: {worktree_dir}/ANALYST-{STORY-ID}, branch analyst/{STORY-ID}, cut from main at {base sha} (the ruling merged at {ruling merge sha}). Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: the ruling {ADR path}; docs/issues/{EPIC-ID}-{slug}/epic.md; the use case the new scope extends: {path | none}; docs/templates/story-template.md; docs/glossary.md.
 Do NOT read: other stories, other epics.
@@ -262,7 +270,8 @@ Design the architecture for {EPIC-ID} and codify the project rules.
 WHY: Developers implement exactly what your rules and technical notes say; gaps become guesses.
 
 MODE: Design Mode · project lane: {process.lane: fast | classic}
-WORKTREE: {worktree_dir}/ARCHITECT-{EPIC-ID}, branch architect/{EPIC-ID}-design, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+WORKTREE: {worktree_dir}/ARCHITECT-{EPIC-ID}, branch architect/{EPIC-ID}, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: docs/project.md, docs/requirements/ (BRDs + use cases for this epic), docs/issues/{EPIC-ID}-{slug}/ (epic + stories), existing rules in .claude/rules/, existing specs (openspec spec list, if OpenSpec is installed); the quality-gate seed `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md` (structure only).
 
@@ -273,9 +282,9 @@ DISCIPLINE:
 - Commit as `{EPIC-ID}: Define architecture for {feature} [by Architect]` / `{PREFIX}: Update architecture rules [by Architect]`. A hook denies attribution trailers; this project's rule overrides the harness's commit template. Never skip hooks; do not push or merge — I merge your branch.
 {standing lines}
 
-DELIVERABLE: (1) .claude/rules/architecture.md + .claude/rules/quality-gate.md with EXACT project commands — both MANDATORY — in every section, §Whole-tree checks and §Per story included (a classic-only project may delete the fast-lane sections, per your skill); (2) domain rules customized for the stack; (3) ## Technical Notes in every story of the epic, and a corrected **Tier:** line where your design reveals a critical signal the Analyst missed (list every tier change in DETAILS — I update state); (4) ## Architecture Notes in epic.md; (5) in DETAILS, `stories changed: {STORY-IDs whose ACs or scope your design changes | none}` — they get an amendment pass. All committed on your branch.
+DELIVERABLE: (1) .claude/rules/architecture.md + .claude/rules/quality-gate.md with EXACT project commands — both MANDATORY — in every section, §Whole-tree checks and §Per story included, in every project (quality-gate.md §Lanes); (2) domain rules customized for the stack; (3) ## Technical Notes in every story of the epic, and a corrected **Tier:** line where your design reveals a critical signal the Analyst missed (list every tier change in DETAILS — I update state); (4) ## Architecture Notes in epic.md; (5) in DETAILS, `stories changed: {story IDs whose file you edited (tier, ACs, notes pointers) | none}` — they get an amendment pass. All committed on your branch.
 
-VERIFICATION: I will check architecture.md and quality-gate.md exist on your branch, quality-gate.md contains runnable commands (no {placeholders} left) — §Per story and §Whole-tree checks filled when the project lane is fast — and every story has Technical Notes; no `docs/state/` path in your branch's diff; attribution-trailer count 0.
+VERIFICATION: I will check architecture.md and quality-gate.md exist on your branch, quality-gate.md contains runnable commands (no {placeholders} left) in every section, §Per story and §Whole-tree checks included, and every story has Technical Notes; no `docs/state/` path in your branch's diff; attribution-trailer count 0.
 
 REPORT: the envelope from your skill, OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | BLOCKED, under {cap} characters. NEEDS_REQUIREMENTS_FIX names the BRD/story defects — I will loop Product Manager/Analyst and re-dispatch you.
 ```
@@ -289,6 +298,7 @@ WHY: The project switches process.lane to fast; a fast epic cannot start while q
 
 MODE: Design Mode — gate upgrade{ (with {EPIC-ID}'s design) | (no epic)}
 WORKTREE: {worktree_dir}/ARCHITECT-gate-upgrade, branch architect/gate-upgrade, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: .claude/rules/quality-gate.md; the seed `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md` (its sections); .claude/rules/architecture.md; the test roots: {test directories}.
 Do NOT read: stories, epics (unless an epic is named above).
@@ -302,9 +312,9 @@ DISCIPLINE:
 
 DELIVERABLE: quality-gate.md with the seed's §Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end and §Enforcement, every command exact, committed on your branch.
 
-VERIFICATION: on your branch, `grep -c '^## Per story' .claude/rules/quality-gate.md` → 1 and the placeholder grep prints nothing (or only literal braces named in DETAILS); attribution-trailer count 0.
+VERIFICATION: on your branch, `grep -c '^## Per story' .claude/rules/quality-gate.md` → 1, the placeholder grep prints nothing (or only literal braces named in DETAILS), and EVIDENCE shows the missing-command check printed nothing; attribution-trailer count 0.
 
-REPORT: the envelope from your skill, OUTCOME: DESIGNED | BLOCKED, under {cap} characters. EVIDENCE: the placeholder-grep count; the rules budget.
+REPORT: the envelope from your skill, OUTCOME: DESIGNED | BLOCKED, under {cap} characters. EVIDENCE: the placeholder-grep count; `gate upgrade: missing-command check printed nothing` (your skill's command-loss check); the rules budget.
 ```
 
 ## Architect — Init Rules Session (interactive, dispatched from /agent-sdlc:init)
@@ -367,6 +377,7 @@ WHY: {how the question arose — a review note, a Developer's BLOCKED report —
 
 MODE: Ruling — {{ITEM-ID} is BLOCKED | before {ITEM-ID} is dispatched | pre-ruling before {ITEM-ID} | ordering: {ITEM-IDs}}
 WORKTREE: {worktree_dir}/ARCH-{topic}, branch architect/{ITEM-ID}-{topic}, cut from main at {base sha}. Docs, rules and ADRs only — never code. I merge the branch into main with `--no-ff`.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 CARRIED IN: {BLOCKED: the Developer's BLOCKERS line, verbatim | —} THE OPTIONS — (a) {…}; (b) {…}; (c) something better. WEIGH AGAINST: {ADR ids, rule files, size, what the system already refuses}.
 
 INPUTS: {the saved review and its note: docs/reviews/{ITEM-ID}-{n}.md, N-{n} | the Developer's BLOCKERS in CARRIED IN}; {ADR paths | none}; {rule files, by section}; code read-only via `git show origin/{branch}:{path}` — never check a branch out. ADR directory: {path | none — your skill's default}; the ADR to amend: {path | none — a new ADR}. Rule files to change: {paths}.
@@ -396,6 +407,7 @@ WHY: The batch end resolves every note; rule-gap and rule-text notes need the Ar
 
 MODE: Ruling — Notes triage (batch end)
 WORKTREE: {worktree_dir}/ARCH-{EPIC-ID}-notes, branch architect/{EPIC-ID}-notes, cut from main at {base sha}. Docs, rules and ADRs only — never code. I merge the branch into main with `--no-ff`.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: docs/reviews/{EPIC-ID}-notes.md (main checkout; never edit it) — lines {N-ids | none named: your skill's grep for the open `rule gap` / `rule text` lines}; the saved reviews those lines cite; the rule files they name, by section.
 Do NOT read: the other notes, stories; source beyond `git show origin/{feature-branch}:{path}` for a file a note names.
@@ -412,7 +424,7 @@ DELIVERABLE: one outcome per note; the rule text of every ruled note in one comm
 
 VERIFICATION: I will check one DETAILS line per named N-id; `git diff --name-only main...architect/{EPIC-ID}-notes` lists docs, rules and ADRs only; attribution-trailer count 0; the content-guard line.
 
-REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | BLOCKED, near 1,200 characters. DETAILS: one line per note — `N-{n}: ruled — {rule file}` | `N-{n}: not a rule — {why}`.
+REPORT: the envelope from your skill (ITEM: {EPIC-ID}), OUTCOME: DESIGNED | NEEDS_REQUIREMENTS_FIX | BLOCKED, near 1,200 characters. DETAILS: one line per note — `N-{n}: ruled — {rule file} ({sha})` | `N-{n}: not a rule — {why}`.
 ```
 
 ## Cloud Architect
@@ -423,6 +435,7 @@ Design the cloud infrastructure for {project | EPIC-ID}.
 WHY: {deployment goal, e.g. "the product deploys to {env list} and DevOps implements from your design"}.
 
 WORKTREE: {worktree_dir}/CLOUD-{EPIC-ID | project}, branch cloud/{EPIC-ID | project}, cut from main at {base sha}. Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: docs/project.md, .claude/rules/ (root + infra/), docs/issues/{EPIC-ID}-{slug}/epic.md architecture notes, docs/state/environments.json (target environments; main checkout, READ ONLY).
 
@@ -448,6 +461,7 @@ Implement CI/CD and infrastructure for {project | EPIC-ID}.
 WHY: implements the Cloud Architect's design so deployments are reproducible.
 
 WORKTREE: {worktree_dir}/DEVOPS-{EPIC-ID | project}, branch devops/{EPIC-ID | project}, cut from main at {base sha} (the cloud design merged at {sha}). Write ONLY there; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: .claude/rules/infra/ (including cloud-architecture.md), .claude/rules/quality-gate.md, docs/state/environments.json (main checkout, READ ONLY), project configuration files.
 
@@ -474,6 +488,7 @@ WHY: {user-facing goal of the epic}.
 
 MODE: {interactive — user available | autonomous — --no-human, decide per your skill's defaults and record decisions}
 WORKTREE: {worktree_dir}/DESIGNER-{EPIC-ID}, branch designer/{EPIC-ID}, cut from main at {base sha}. Write ONLY there — previews included; I merge the branch into main.
+REPORTS: {reports} — logs and report files go here, outside every worktree.
 
 INPUTS: docs/issues/{EPIC-ID}-{slug}/ stories + use cases, BRD {BRD-ID}, .claude/rules/frontend/ (design system rules if present).
 
