@@ -588,8 +588,7 @@ Milestone entry (inside `"milestones"`) and its order:
   "deploy_exclusivity": "per_target_branch",
   "max_local_stacks": 2,
   "report_max_chars": 3500,
-  "commit_attribution": false,
-  "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
+  "attribution_patterns": [],
   "commit_conventions": null,
   "shell": "zsh",
   "models": { "default": "inherit" },
@@ -610,15 +609,14 @@ Milestone entry (inside `"milestones"`) and its order:
 | `deploy_exclusivity` | `per_target_branch` \| `per_epic` | `per_target_branch` | `per_epic` | sdlc-dispatch section 2 |
 | `max_local_stacks` | integer | `2` | `2` | sdlc-dispatch section 2 |
 | `report_max_chars` | integer | `3500` | `3500` | every brief's REPORT cap |
-| `commit_attribution` | `false` (the hook denies attribution) \| `true` | `false` | `false` | `hooks/scripts/guard-commit.sh` |
-| `attribution_patterns` | case-insensitive fixed strings | as shown | same | the same hook |
+| `attribution_patterns` | EXTRA case-insensitive fixed strings, added to the built-in list — they can never remove or replace it | `[]` | `[]` | `hooks/scripts/guard-commit.sh` |
 | `commit_conventions` | `null` \| `{"prefix_pattern": "{POSIX ERE with {PREFIX}}"}` — applies to EVERY commit with a single `-m`, PM state commits included, so the pattern must accept `{PREFIX}: …` too; no `\d`/`\w` (POSIX ERE) | `null` | `null` | the same hook |
 | `shell` | `zsh` \| `bash` | from `$SHELL` | from `$SHELL` | the evidence-and-shell reference |
 | `models` | `{"default": "inherit", "{Role}": "{model}", "{Role}:{mode}": "{model}"}` | `{"default": "inherit"}` | same | sdlc-dispatch section 1 |
 | `standing_brief_lines` | `{"all": [...], "{Role}": [...]}` | `{"all": []}` | same | every brief's `{standing lines}` |
 | `content_guard` | `null` \| `{"command": "{cmd}", "pre_commit": true \| false}` | `null` | `null` | quality-gate Step 0; init's pre-commit hook |
 
-(`commit_attribution: false` is lane-independent git hygiene: the classic preset keeps it — turning the hook off is one key.)
+**The attribution ban is mandatory** in every agent-sdlc project, both lanes, with no switch: the hook always denies the built-in patterns `co-authored-by`, `generated with claude`, `🤖`, `claude-session` (plus the project's `attribution_patterns`). A `commit_attribution` key left in an older `project.json` is ignored.
 
 `docs/state/project.json` `integrations.runners` — remote stack runners (runners reference):
 
@@ -689,7 +687,7 @@ Commit conventions (exact formats):
 | Deploy: main-in / feature-in | `{PREFIX}: Merge main into {EPIC-ID} for the batch end [by Deploy]` / `{PREFIX}: Merge {EPIC-ID} into {EPIC-ID} [by Deploy]` |
 | Deploy: epic to main (classic) / delivery (fast) | `{PREFIX}: Deploy {EPIC-ID} ({title}) to main [by Deploy]` / first line of `docs/templates/delivery-commit-template.md` |
 
-While `process.commit_attribution` is `false` (both presets): no attribution trailers (`Co-Authored-By`, "Generated with Claude", session links) in any commit or PR — `hooks/scripts/guard-commit.sh` denies them, and this project rule overrides the harness's default commit template.
+No attribution trailers — ever, in every agent-sdlc project (section 6) (`Co-Authored-By`, "Generated with Claude", session links) in any commit or PR — `hooks/scripts/guard-commit.sh` denies them, and this project rule overrides the harness's default commit template.
 
 ## MUST NOT DO
 

@@ -185,6 +185,17 @@ else
 fi
 end_check "stale: $QG has 9 '## ' sections"
 
+# 4c. The attribution ban is mandatory: the removed switch process.commit_attribution may be named only as ignored.
+# shellcheck disable=SC2086
+grep -rnI --exclude-dir=__pycache__ 'commit_attribution' $STALE_SCOPE 2>/dev/null > "$TMP/attr"
+na=0
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  case "$hit" in *ignored*) ;; *) na=$((na+1)); bad "stale ${hit%%:*}: commit_attribution named as a switch (the ban is mandatory)" ;; esac
+done < "$TMP/attr"
+[ "$na" -eq 0 ] && ok
+end_check "stale: commit_attribution named only as an ignored legacy key"
+
 # ---- 5. hooks/hooks.json scripts exist and are executable ---------------------------------------------------
 HJ=hooks/hooks.json
 nh=0

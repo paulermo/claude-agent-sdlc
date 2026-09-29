@@ -31,11 +31,12 @@ expect() { # $1 name, $2 deny|allow, $3 cwd, $4 command
   else FAIL=$((FAIL+1)); echo "FAIL $1 (expected $2, got $got) :: $out"; fi
 }
 
-P="$TMP/proj"; mkproj "$P" '{"commit_attribution":false}'
-mkdir -p "$P/.worktrees/TST-STORY-1"; mkproj "$P/.worktrees/TST-STORY-1" '{"commit_attribution":false}'
+P="$TMP/proj"; mkproj "$P" '{}'
+mkdir -p "$P/.worktrees/TST-STORY-1"; mkproj "$P/.worktrees/TST-STORY-1" '{}'
 OFF="$TMP/off"; mkproj "$OFF" '{"commit_attribution":true}'
-PFX="$TMP/pfx"; mkproj "$PFX" '{"commit_attribution":false,"commit_conventions":{"prefix_pattern":"^{PREFIX}-[A-Z]+-[0-9]+: "}}'
-CUS="$TMP/cus"; mkproj "$CUS" '{"commit_attribution":false,"attribution_patterns":["internal-bot"]}'
+PFX="$TMP/pfx"; mkproj "$PFX" '{"commit_conventions":{"prefix_pattern":"^{PREFIX}-[A-Z]+-[0-9]+: "}}'
+CUS="$TMP/cus"; mkproj "$CUS" '{"attribution_patterns":["internal-bot"]}'
+EMPTY="$TMP/empty"; mkproj "$EMPTY" '{"attribution_patterns":[]}'
 BAD="$TMP/bad"; mkdir -p "$BAD/docs/state"; printf '{not json\n' > "$BAD/docs/state/project.json"
 NONE="$TMP/none"; mkdir -p "$NONE"
 printf 'Fix it\n\nCo-Authored-By: X <x@y>\n' > "$P/msg.txt"
@@ -71,11 +72,12 @@ expect "git log --grep ignored"          allow "$P" 'git log --grep co-authored-
 expect "git commit-tree ignored"         allow "$P" 'git commit-tree HEAD^{tree} -m "Co-Authored-By: a"'
 expect "generated with (not claude) ok"  allow "$P" 'git commit -m "Regenerate lockfile generated with npm"'
 expect "outside project ignored"         allow "$NONE" 'git commit -m "x" -m "Co-Authored-By: a"'
-expect "malformed project.json ignored"  allow "$BAD" 'git commit -m "x" -m "Co-Authored-By: a"'
+expect "malformed config still enforced" deny  "$BAD" 'git commit -m "x" -m "Co-Authored-By: a"'
 expect "nested worktree scoped"          deny  "$P/.worktrees/TST-STORY-1" 'git commit -m "Co-Authored-By: a"'
-expect "switch true is a no-op"          allow "$OFF" 'git commit -m "Co-Authored-By: a"'
+expect "legacy off switch ignored"       deny  "$OFF" 'git commit -m "Co-Authored-By: a"'
 expect "custom pattern denied"           deny  "$CUS" 'git commit -m "x by internal-bot"'
-expect "custom list replaces defaults"   allow "$CUS" 'git commit -m "x" -m "Co-Authored-By: a"'
+expect "custom list extends defaults"    deny  "$CUS" 'git commit -m "x" -m "Co-Authored-By: a"'
+expect "empty list keeps defaults"       deny  "$EMPTY" 'git commit -m "x 🤖"'
 expect "prefix ok"                       allow "$PFX" 'git commit -m "TST-STORY-2: Add y [by Developer]"'
 expect "prefix wrong denied"             deny  "$PFX" 'git commit -m "Add y"'
 expect "prefix exempt Merge"             allow "$PFX" 'git commit -m "Merge branch x"'

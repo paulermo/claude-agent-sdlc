@@ -81,7 +81,7 @@ Every story carries a **tier** (`light` / `standard` / `critical`, set by the Sy
 - Fast lane: a story that already contains the feature tip is fast-forwarded by the PM; otherwise Deploy merges it and runs whole static analysis on the merged tree. A red merge goes to a `fix/{ITEM}-merge` branch for a merge-fix Developer — never onto the feature, never a bug. At the batch end `main` is merged into the feature, the full gate runs, and one `--no-ff` delivery merge (release notes as the commit message) goes to `main`. Main regression runs per `process.main_regression` (by default only when `main` gained code since the gated merge).
 - Classic lane: story → feature → main, full quality gate + regression QA at each step.
 - The main checkout always stays on `main` (the tracker reads it); planning agents work in their own worktrees.
-- Conflict law: combination only — `-X theirs`/`-X ours` and force pushes are blocked by a hook; attribution trailers are blocked by another (`process.commit_attribution`).
+- Conflict law: combination only — `-X theirs`/`-X ours` and force pushes are blocked by a hook; attribution trailers are blocked by another, always (no switch; `process.attribution_patterns` only adds patterns).
 
 ### Progress tracker
 
@@ -113,7 +113,7 @@ Two caveats from the Claude Code docs: (1) teammates do NOT inherit the lead's `
 
 ## Upgrading from 1.x
 
-Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end) to your `.claude/rules/quality-gate.md`. The attribution hook is active from the plugin upgrade on (an absent `commit_attribution` means "deny"); init also writes `.claude/settings.json` attribution settings, and `process.commit_attribution: true` turns the hook off. Two classic-lane gaps of 1.6 are now defined: a failed main regression and a red epic merge each register one bug and send the epic back to `in_progress` (a red epic merge is reset off local `main` first).
+Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end) to your `.claude/rules/quality-gate.md`. The attribution ban is mandatory: the hook is active from the plugin upgrade on and cannot be turned off (a `commit_attribution` key in an older `project.json` is ignored); init also writes `.claude/settings.json` attribution settings. Two classic-lane gaps of 1.6 are now defined: a failed main regression and a red epic merge each register one bug and send the epic back to `in_progress` (a red epic merge is reset off local `main` first).
 
 ## Optional dependencies
 

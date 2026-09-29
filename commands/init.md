@@ -85,8 +85,7 @@ content/
     "deploy_exclusivity": "per_target_branch",
     "max_local_stacks": 2,
     "report_max_chars": 3500,
-    "commit_attribution": false,
-    "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
+    "attribution_patterns": [],
     "commit_conventions": null,
     "shell": "{zsh | bash — answer 6}",
     "models": { "default": "inherit" },
@@ -159,8 +158,7 @@ content/
      "deploy_exclusivity": "per_epic",
      "max_local_stacks": 2,
      "report_max_chars": 3500,
-     "commit_attribution": false,
-     "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
+     "attribution_patterns": [],
      "commit_conventions": null,
      "shell": "{zsh | bash}",
      "models": { "default": "inherit" },
@@ -187,7 +185,7 @@ docs/state/.secrets.json
 .worktrees/
 ```
 
-2.7b. **Attribution settings** — when `process.commit_attribution` is `false` (the default): merge into the project's `.claude/settings.json` (create it with `{}` if absent; never overwrite other keys):
+2.7b. **Attribution settings** — always (the ban is mandatory in every agent-sdlc project, sdlc-state section 6): merge into the project's `.claude/settings.json` (create it with `{}` if absent; never overwrite other keys):
 ```json
 { "attribution": { "commit": "", "pr": "" } }
 ```
@@ -219,8 +217,8 @@ This project is driven by the agent-sdlc pipeline.
   (Developer/Content roles). Fast lane: then one Reviewer round, then Deploy; the full
   gate runs once per batch before delivery to `main`. Classic lane: then Reviewer, then
   QA, then Deploy.
-- **No attribution trailers** in commits or PRs — a hook denies them while
-  `process.commit_attribution` is `false` in `docs/state/project.json`.
+- **No attribution trailers** in commits or PRs — ever; a hook denies them and
+  there is no switch to turn it off.
 - **Documents**: templates in `docs/templates/`, requirements in `docs/requirements/`,
   epics/stories/bugs/follow-ups in `docs/issues/`, reviews in `docs/reviews/`, QA reports in `docs/reports/`.
 - `/agent-sdlc:status` — where things stand; `/agent-sdlc:start` — continue the pipeline;
@@ -251,7 +249,7 @@ This project is driven by the agent-sdlc pipeline.
 > - .claude/rules/ — project rules, auto-loaded and inherited by every agent; quality-gate.md seeded for the Architect to fill
 > - docs/templates/ — document templates (BRD, UC, epic, story, bug, content, notes file, batch-gate report, delivery commit, demo slice)
 > - CLAUDE.md — SDLC block installed
-> - Hooks active: state-file JSON validation, git discipline guard, attribution guard (set `process.commit_attribution` to `true` in `docs/state/project.json` to turn it off), session state summary
+> - Hooks active: state-file JSON validation, git discipline guard, attribution guard (mandatory — `process.attribution_patterns` can only add patterns), session state summary
 > - Lane for new epics: {fast | classic} — `process` in `docs/state/project.json` holds every pipeline setting
 >
 > 14 agents registered. Rules: {configured with you in the Architect session | seeded — the Architect will customize them during planning}.

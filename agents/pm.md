@@ -69,4 +69,4 @@ Both are read in full at `/agent-sdlc:start` Step 0. Everything else loads on de
 {PREFIX}: {description} [by PM]
 ```
 
-No attribution trailers (`Co-Authored-By`, "Generated with Claude", session links) while `process.commit_attribution` is `false` — `hooks/scripts/guard-commit.sh` denies them (sdlc-state section 7).
+No attribution trailers (`Co-Authored-By`, "Generated with Claude", session links) — ever, in every agent-sdlc project; `hooks/scripts/guard-commit.sh` denies them and has no off switch (sdlc-state section 7).

@@ -2,7 +2,7 @@
 # agent-sdlc PreToolUse hook (Bash).
 # In SDLC-initialized projects, denies commits and PRs whose text carries an
 # attribution trailer (Co-Authored-By, "Generated with Claude", 🤖,
-# claude-session; configurable via process.attribution_patterns). Agents follow
+# claude-session — always; process.attribution_patterns may only ADD patterns). Agents follow
 # the harness's default commit template over a brief line that merely states
 # the rule, so the rule is enforced at the moment of the commit.
 #   Checked: git [-C path] [-c k=v] commit ..., git ... merge ... -m ...,
@@ -10,7 +10,8 @@
 #   Scanned: the checked command's own text (from the invocation onward, so
 #            heredocs and -m "$(cat <<'EOF' ...)" are covered) plus the
 #            -F/--file (git) or --body-file/-F (gh) message file.
-#   Off switch: process.commit_attribution = true.
+#   Mandatory: there is no off switch — the built-in patterns apply even when
+#            project.json is unreadable (only the optional prefix check fails open).
 #   Optional: process.commit_conventions.prefix_pattern ({PREFIX} = .prefix)
 #            is enforced on a `git commit` with one quoted -m message
 #            (Merge/Revert/fixup!/squash! exempt).
@@ -103,9 +104,6 @@ done
 [ -n "$ROOT" ] || exit 0
 PROJ="$ROOT/docs/state/project.json"
 
-SWITCH=$(jq -r '.process.commit_attribution == true' "$PROJ" 2>/dev/null) || exit 0
-[ "$SWITCH" = "true" ] && exit 0
-
 # --- Attribution patterns: checked command's remainder + message/body file ---
 TEXT="$COMMIT_REST
 $MERGE_REST
@@ -127,12 +125,19 @@ if [ -n "$GH_REST" ] && [[ $GH_REST =~ $RE_GHFILE ]]; then
   add_file "${BASH_REMATCH[3]}"
 fi
 
-PATTERNS=$(jq -r '(.process.attribution_patterns // ["co-authored-by","generated with claude","🤖","claude-session"])
+# Built-in patterns always apply; a project's list only adds to them.
+BUILTIN='co-authored-by
+generated with claude
+🤖
+claude-session'
+EXTRA=$(jq -r '(.process.attribution_patterns // [])
   | if type == "array" then .[] | strings else empty end' "$PROJ" 2>/dev/null)
+PATTERNS="$BUILTIN
+$EXTRA"
 while IFS= read -r p; do
   [ -n "$p" ] || continue
   if printf '%s\n' "$TEXT" | grep -qiF -e "$p"; then
-    deny "agent-sdlc: commit/PR text contains the attribution pattern \"$p\". This project forbids attribution trailers (process.commit_attribution=false); this rule overrides the harness's default commit template. Rewrite the message without it."
+    deny "agent-sdlc: commit/PR text contains the attribution pattern \"$p\". agent-sdlc projects never carry attribution trailers; this rule overrides the harness's default commit template. Rewrite the message without it."
   fi
 done <<EOF
 $PATTERNS

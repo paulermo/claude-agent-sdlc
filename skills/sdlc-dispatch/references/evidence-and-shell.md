@@ -22,8 +22,8 @@ reported a pass for a check that never ran — and a gate guard exited 0 while n
    exit 0 is red, a log that fails its expected-output check (`--expect`) is red, and a log from another start is never
    this run's result. Procedure: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/runners.md`. WHY: a failed start
    once left the previous run's result in place, and it was read as this run's pass.
-7. **Commit trailers are part of the evidence check**: a commit carrying an attribution trailer fails verification
-   while `process.commit_attribution` is `false` (sdlc-state section 7).
+7. **Commit trailers are part of the evidence check**: a commit carrying an attribution trailer always fails
+   verification — the ban has no switch (sdlc-state section 7).
 
 ## Shell rules (every shell)
 

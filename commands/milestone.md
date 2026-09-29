@@ -84,7 +84,7 @@ Read-only: no file is written, nothing is committed.
    - `new`: every field filled, never `unchanged`; no epics / stories → `none`; no target → `none`;
    - `edit`: an unchanged field → `unchanged`; a changed `epics:` / `stories:` → the COMPLETE list after the change (current list plus additions, minus removals; emptied → `none`), IDs joined with `, `.
    An `edit` whose six lines would all be `unchanged` → write nothing, output `Nothing changed — no directive written.`, stop.
-4. Commit that one file by path, with exactly this message and no attribution trailer (`hooks/scripts/guard-commit.sh` denies trailers while `process.commit_attribution` is `false`; this project rule overrides the harness's default commit template):
+4. Commit that one file by path, with exactly this message and no attribution trailer (`hooks/scripts/guard-commit.sh` always denies trailers; this rule overrides the harness's default commit template):
    `git add -- {path} && git commit -m "{PREFIX}: Milestone directive {slug} [by user]" -- {path}`
    Evidence: `git log -1 --format='%h %s' -- {path}` prints `{sha} {PREFIX}: Milestone directive {slug} [by user]`.
 5. Output exactly (the last line only for `new`):

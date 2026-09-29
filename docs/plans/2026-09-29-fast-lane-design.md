@@ -71,8 +71,7 @@ Init writes one of two presets. Keys are independent at runtime (a project may m
 | `deploy_exclusivity` | `per_target_branch` | `per_epic` |
 | `max_local_stacks` | `2` | `2` |
 | `report_max_chars` | `3500` | `3500` |
-| `commit_attribution` | `false` (the hook enforces) | `false` — git hygiene is lane-independent; the repair summary says how to turn it off |
-| `attribution_patterns` | `["co-authored-by", "generated with claude", "🤖", "claude-session"]` | same |
+| `attribution_patterns` | `[]` — EXTRA patterns only; the built-in list always applies | same |
 | `commit_conventions` | `null` | `null` |
 | `shell` | from `$SHELL` (`zsh` / `bash`) | same |
 | `models` | `{"default": "inherit"}` | same |
@@ -198,12 +197,18 @@ are not dispatched until the delivery. **Classic** keeps the 1.6.1 "Deploy flow"
   selected nothing is red; quote the last run that passed; only the gate's own targets are evidence; "not present yet"
   is red; the shell rules (zsh block when `process.shell: zsh`).
 - **Attribution hook (C25):** `hooks/scripts/guard-commit.sh`, second `PreToolUse` hook on `Bash`, exactly per the spec's
-  C25 (d): scope = walk up from `.cwd` / `-C` to `docs/state/project.json` (silent in this plugin repo); switch
-  `commit_attribution`; patterns `attribution_patterns` (no `[by `, Q17); checks `git commit` in every form,
+  C25 (d): scope = walk up from `.cwd` / `-C` to `docs/state/project.json` (silent in this plugin repo); NO switch
+  (user decision, below); the built-in patterns always, plus `attribution_patterns` as extras (no `[by `, Q17); checks `git commit` in every form,
   `git merge -m`, `gh pr create|edit`, and the files named by `-F` / `--body-file`; optional prefix check from
   `commit_conventions`; deny reason says the project rule overrides the harness's commit template. Init writes the
   project's `.claude/settings.json` attribution settings (exact key verified against current Claude Code docs at
   implementation time). The PM's trailer check stays as the second line.
+- **Attribution ban is mandatory (user decision, 2026-09-29, after the 2.0.0 merge):** the spec's C25 switch
+  `process.commit_attribution` is dropped. The hook denies the built-in patterns (`co-authored-by`,
+  `generated with claude`, `🤖`, `claude-session`) in every agent-sdlc project, both lanes, even when `project.json` is
+  unreadable; `attribution_patterns` can only add patterns, never remove or replace the built-in ones; a
+  `commit_attribution` key left in an older `project.json` is ignored. Init writes the `.claude/settings.json`
+  attribution settings unconditionally. (Deviation from the spec's C25 switch.)
 - **Git (C20):** the main checkout stays on `main`; state committed by path (`git commit -m … -- docs/state {files}`);
   planning roles work in `.worktrees/{ROLE}-{topic}` and the PM merges their branches; stray state commits per C20; the
   PM's permitted plumbing is a closed list: `merge --ff-only`, plain push, trailer amend on an unpushed agent commit,
@@ -298,7 +303,8 @@ failed main regression now have rows (one bug, epic back to `in_progress`) where
 
 - `tests/hooks/guard-commit.test.sh` — fixture projects: `-m` with a trailer, a heredoc, `-F file`, `git -C path commit`,
   `merge -m`, `gh pr create --body-file`; a non-commit command; outside a project; a nested worktree;
-  `commit_attribution: true` → no-op; the prefix check.
+  a legacy `commit_attribution: true`, an empty and a custom `attribution_patterns`, a malformed `project.json` → still
+  denied; the prefix check.
 - `tests/runners/run-step.test.sh` — a local stub transport: the step's own exit code; empty log → 3; `--allow-empty`;
   `--expect` mismatch → 3; still running → 124; a failed start leaves `.pending` → `wait` 3; token mismatch → 3; an old
   `.done` is never read as this run's pass.
@@ -317,6 +323,6 @@ failed main regression now have rows (one bug, epic back to `in_progress`) where
 
 Existing projects: no `process` block → classic preset, epics without a `lane` stamp → classic; `/agent-sdlc:init`
 repair adds the block and asks about switching new epics to `fast`. No item migration (absent fields default).
-Classic keeps every 1.6.1 behaviour except lane-independent hygiene: the attribution hook (on by default, one key to
-turn off), evidence-and-shell, report files, brief slots, recovery. Version 2.0.0: the default lane of new projects
+Classic keeps every 1.6.1 behaviour except lane-independent hygiene: the attribution hook (mandatory, no
+switch), evidence-and-shell, report files, brief slots, recovery. Version 2.0.0: the default lane of new projects
 changes the pipeline's shape.
