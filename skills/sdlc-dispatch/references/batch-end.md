@@ -81,7 +81,7 @@ When step 1 routed ≥ 1 note to the Architect: `git worktree add -b architect/{
 **Skip** when step 2 was MERGED and no id chosen at step 1 is left unfixed (on a re-gate pass none is): decision `batch fix skipped: main-in green, no note chosen`; stage `gate`; step 4. *Default, not law: deviate only on concrete grounds (e.g. a meeting fix another epic already made — `cross-epic.md`), and record the rationale in a decision line.*
 
 1. `git worktree add -b fix/{EPIC-ID}-batch {worktree_dir}/{EPIC-ID}-batch-fix {main-in}; echo "exit=$?"`; register `"{EPIC-ID}-batch-fix"` (`stack` per the brief's STACK).
-2. Dispatch Developer — `briefs/developer.md` "Developer — batch fix (F9)": PART 1 = the main-in's failures and any cherry-pick `cross-epic.md` names; PART 3 = the chosen N- and FU-ids. Teammate `developer-{EPIC-ID}-batch`; model key `Developer:batch_fix`; dispatch line `dispatch: Developer (batch fix)`.
+2. Dispatch Developer — `briefs/developer.md` "Developer — batch fix (F9)": PART 1 = the main-in's failures and any cherry-pick `cross-epic.md` names; PART 3 = the chosen N- and FU-ids. Teammate `developer-{EPIC-ID}-batch`; model key `Developer:batch_fix`; dispatch line `dispatch: Developer (batch fix)`. In the same response `batch.fix_attempts` + 1 (sdlc-state §4 Epic).
 3. IMPLEMENTED → the diff read (sdlc-dispatch §3, the fast-lane exception — the named defects and notes only): `git rev-parse fix/{EPIC-ID}-batch` prints the reported head; then `git diff {main-in}..{head}`.
 4. All closed → report line `report: Developer (batch fix); PM verified the diff` (note: `{main-in}..{head}`, each id → fixed, the counts); fast-forward the feature, remove the worktree and delete the merged fix branch — and the main-in's fix branch, when step 2 was VERIFICATION_FAILED — as below (`-d` from `{merge}`: its HEAD holds the branch; WHY: a leftover fix branch collides with the next red run); drop the worktree entry; stage `gate`; step 4.
 
@@ -97,7 +97,7 @@ git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only
 
 | Situation | Action |
 |---|---|
-| A named id is `open`, or the Developer reports BLOCKED | first time: re-dispatch once — a fresh Developer on the same branch naming only the open ids (a design question: a ruling first, `rulings.md`). Second time: an open note → leave it (step 6: `→ FU-{m}`); a defect or BLOCKED → epic `held: "batch fix failed twice"` (decision `held: {EPIC-ID} — batch fix failed twice`, sdlc-state §4 Held), surface to the user |
+| A named id is `open`, or the Developer reports BLOCKED | `batch.fix_attempts` < 2: re-dispatch once (+ 1) — a fresh Developer on the same branch naming only the open ids (a design question: a ruling first, `rulings.md`). Second time: an open note → leave it (step 6: `→ FU-{m}`); a defect or BLOCKED → epic `held: "batch fix failed twice"` (decision `held: {EPIC-ID} — batch fix failed twice`, sdlc-state §4 Held), surface to the user |
 | A push is refused | never force: `git -C {merge} fetch origin`, show what moved, surface to the user |
 
 ## 4. Full gate — stage `gate`
@@ -118,7 +118,7 @@ git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only
 Runs after a red run while `red_runs` < 3, and once per "one more run". `{run}` = the SHA run {N} ran on.
 
 1. `git worktree add -b fix/{EPIC-ID}-gate-run{N} {worktree_dir}/{EPIC-ID}-gate-run{N} {run}; echo "exit=$?"`; register it.
-2. Dispatch Developer — `briefs/developer.md` "Developer — fix loop (F11)" with the red step and `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md`; teammate `developer-{EPIC-ID}-run{N}`; model key `Developer:fix_loop`; dispatch line `dispatch: Developer (fix loop)`.
+2. Dispatch Developer — `briefs/developer.md` "Developer — fix loop (F11)" with the red step and `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md`; teammate `developer-{EPIC-ID}-run{N}`; model key `Developer:fix_loop`; dispatch line `dispatch: Developer (fix loop)`. In the same response `batch.fix_attempts` + 1 (sdlc-state §4 Epic).
 3. IMPLEMENTED → the diff read against the red step's failure only; report line `report: Developer (fix loop); PM verified the diff`; fast-forward, push, remove the worktree and delete the branch as in step 3.4, with `fix/{EPIC-ID}-gate-run{N}`; stage `gate`; step 4, re-run from the failed step. No review, no bug (sdlc-state §5). An open id or BLOCKED: as step 3's Situation table.
 
 **The bound (LAW).** A FAILED report that brings `red_runs` to 3 or more dispatches nothing. Present —
