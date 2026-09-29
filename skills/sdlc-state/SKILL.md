@@ -560,7 +560,7 @@ Ports: allocate `app` starting at 3100, `db` at 5433, incrementing per active wo
   "max_local_stacks": 2,
   "report_max_chars": 3500,
   "commit_attribution": false,
-  "attribution_patterns": ["co-authored-by", "generated with", "🤖", "claude-session"],
+  "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
   "commit_conventions": null,
   "shell": "zsh",
   "models": { "default": "inherit" },
@@ -583,7 +583,7 @@ Ports: allocate `app` starting at 3100, `db` at 5433, incrementing per active wo
 | `report_max_chars` | integer | `3500` | `3500` | every brief's REPORT cap |
 | `commit_attribution` | `false` (the hook denies attribution) \| `true` | `false` | `false` | `hooks/scripts/guard-commit.sh` |
 | `attribution_patterns` | case-insensitive fixed strings | as shown | same | the same hook |
-| `commit_conventions` | `null` \| `{"prefix_pattern": "{ERE with {PREFIX}}"}` | `null` | `null` | the same hook |
+| `commit_conventions` | `null` \| `{"prefix_pattern": "{POSIX ERE with {PREFIX}}"}` — applies to EVERY commit with a single `-m`, PM state commits included, so the pattern must accept `{PREFIX}: …` too; no `\d`/`\w` (POSIX ERE) | `null` | `null` | the same hook |
 | `shell` | `zsh` \| `bash` | from `$SHELL` | from `$SHELL` | the evidence-and-shell reference |
 | `models` | `{"default": "inherit", "{Role}": "{model}", "{Role}:{mode}": "{model}"}` | `{"default": "inherit"}` | same | sdlc-dispatch section 1 |
 | `standing_brief_lines` | `{"all": [...], "{Role}": [...]}` | `{"all": []}` | same | every brief's `{standing lines}` |

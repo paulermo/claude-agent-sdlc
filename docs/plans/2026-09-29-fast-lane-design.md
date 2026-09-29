@@ -72,7 +72,7 @@ Init writes one of two presets. Keys are independent at runtime (a project may m
 | `max_local_stacks` | `2` | `2` |
 | `report_max_chars` | `3500` | `3500` |
 | `commit_attribution` | `false` (the hook enforces) | `false` — git hygiene is lane-independent; the repair summary says how to turn it off |
-| `attribution_patterns` | `["co-authored-by", "generated with", "🤖", "claude-session"]` | same |
+| `attribution_patterns` | `["co-authored-by", "generated with claude", "🤖", "claude-session"]` | same |
 | `commit_conventions` | `null` | `null` |
 | `shell` | from `$SHELL` (`zsh` / `bash`) | same |
 | `models` | `{"default": "inherit"}` | same |

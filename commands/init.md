@@ -86,7 +86,7 @@ content/
     "max_local_stacks": 2,
     "report_max_chars": 3500,
     "commit_attribution": false,
-    "attribution_patterns": ["co-authored-by", "generated with", "🤖", "claude-session"],
+    "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
     "commit_conventions": null,
     "shell": "{zsh | bash — answer 6}",
     "models": { "default": "inherit" },
