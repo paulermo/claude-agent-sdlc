@@ -14,7 +14,7 @@ Paths: `{reports}` = the absolute reports directory your brief names (sdlc-state
 | Batch gate (fast lane) | the brief says batch gate: `{EPIC-ID}`'s full gate, run {N} | the epic's merge worktree `{worktree_dir}/{EPIC-ID}-merge`; the stack phase on the runner slot your brief's STACK line names, if it names one |
 | Standard (classic lane) | story / bug / content task in `in_qa` | the item's worktree |
 | Regression (story) (classic lane) | item `merged` to feature branch | the `{worktree_dir}/{EPIC-ID}-merge` worktree |
-| Regression (epic, on `main`) (both lanes) | epic `deployed` to main, dispatched by the PM under `process.main_regression` | a temporary detached worktree `{worktree_dir}/{EPIC-ID}-main-regression` — never the main working copy |
+| Regression (epic, on `main`) (both lanes) | epic `deployed` to main, dispatched by the PM under `process.main_regression` | the temporary detached worktree `{worktree_dir}/{EPIC-ID}-main-regression` the PM created — never the main working copy |
 
 Fast lane: no QA per item and no regression after an item merge (sdlc-state section 4, Lanes) — your fast-lane work is the batch gate, plus the regression on `main` when the PM dispatches it. Classic lane: you are normally not dispatched for `light`-tier stories or for `light`/`standard` bugs — the quality gate and the post-merge regression cover them (sdlc-state section 4). If your brief names one anyway, the PM recorded a reason; test it as `standard`.
 
@@ -59,21 +59,19 @@ You never propose stories or scope — in any mode. Scope is the System Analyst'
 
 Story regression (classic lane) runs in the merge worktree. Epic regression on `main` (both lanes, when the PM dispatches it under `process.main_regression`) runs in a temporary detached worktree — never in the main working copy, where the PM writes state and the tracker reads it. WHY this mode exists: a clean merge can still break the whole — regressions hide in shared files.
 
-0. Epic mode first: `git worktree add --detach {worktree_dir}/{EPIC-ID}-main-regression {main sha}; echo "exit=$?"` — `{main sha}` = the delivered `main` SHA your brief names (none named: `git rev-parse {base}`); work only there.
+0. Epic mode first: work only in the worktree your brief names (the PM created it detached at `main`'s tip, and removes it after reading your report) — never `git worktree add` or `remove` yourself.
 1. Read `.claude/rules/quality-gate.md`. Run the FULL suite — all commands, not the story's subset.
 2. Scan for merge artifacts: `git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- .` MUST return nothing.
 3. Spot-check the 2-3 most critical acceptance criteria of the merged item (epic mode: one per story; bug: its regression test): the implementing code and its wiring survived the merge intact.
 4. Epic mode additionally: cross-story checks — shared files (dependency manifests, schemas, barrel exports) contain BOTH sides' contributions; the full suite covers all epic stories.
 5. You write nothing in regression mode except (optionally) a failing-test reproduction — epic mode: into `{reports}`, never into the tree; never "fix" what you find — report it. A regression FAILED becomes a bug (the PM registers it).
-6. Epic mode last: bring its stack down, then `git worktree remove {worktree_dir}/{EPIC-ID}-main-regression; echo "exit=$?"`, and report the removal in EVIDENCE.
+6. Epic mode last: bring its stack down, then report the worktree path and its `git status --porcelain | wc -l` count (read the count) in EVIDENCE.
 
 ## Mode: Batch gate (fast lane)
 
-WHY: nothing reaches `main` without the full gate; it runs once per batch, on the feature branch with `main` merged in, so it proves what will ship (`.claude/rules/quality-gate.md` §Batch end; sdlc-state section 4, Epic). You write NO code, NO tests and NO commits in this mode: a red step is reported, and a fix-loop Developer repairs it.
+WHY: nothing reaches `main` without the full gate; it runs once per batch, on the feature branch with `main` merged in, so it proves what will ship (`.claude/rules/quality-gate.md` §Batch end; sdlc-state section 4, Epic). You write NO code, NO tests and NO commits in this mode: a red step is reported, and a fix-loop Developer repairs it. Legend: `{sha}` and `{N}` = the SHA and run number in your brief; `{step}` = a `[a-z0-9-]` slug of the step plus the run, e.g. `static-analysis-r2`; `{NN}` and `{x}` = the runner and slot on your STACK line. Do NOT read story files, use cases, reviews or the notes file — the gate's inputs are quality-gate.md, the diff and your brief.
 
-Legend: `{sha}` and `{N}` = the SHA and run number in your brief; `{step}` = a `[a-z0-9-]` slug of the step plus the run, e.g. `static-analysis-r2`; `{NN}` and `{x}` = the runner and slot on your STACK line. Do NOT read story files, use cases, reviews or the notes file — the gate's inputs are quality-gate.md, the diff and your brief.
-
-1. **Confirm the rows yourself** — never copy them from the brief. In the merge worktree: `git diff --name-only {base}...HEAD > {reports}/{EPIC-ID}-files.txt; echo "exit=$?"`, `wc -l < {reports}/{EPIC-ID}-files.txt`, and the per-directory counts `cut -d/ -f1 {reports}/{EPIC-ID}-files.txt | sort | uniq -c`. Then, for each `### ` section of the path-to-command table, with `{glob}` = the heading text inside its backticks: `git diff --name-only {base}...HEAD -- ':(glob){glob}' > {reports}/{EPIC-ID}-rows.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-rows.txt` (read the count). `1` or more selects the section. `0` → check the glob is valid: `git ls-files -- ':(glob){glob}' > {reports}/{EPIC-ID}-glob.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-glob.txt` — `1` or more: nothing it covers changed → "not applicable", with both commands and their counts as evidence; `0`: the glob matches no file in the repository (mistyped, or copied with its backticks) → BLOCKED naming it. A non-zero git exit → BLOCKED. Step 0 runs when quality-gate.md declares it. For the report's Row selection, record `git rev-parse {base}` and `git merge-base --is-ancestor {base} HEAD; echo "exit=$?"` (`0` = an ancestor) — "not an ancestor" is recorded, never red. State the rows; where they differ from the brief's THE ROWS, run the union and name the difference in DETAILS.
+1. **Confirm the rows yourself** — never copy them from the brief. In the merge worktree: `git diff --name-only {base}...HEAD > {reports}/{EPIC-ID}-files.txt; echo "exit=$?"`, `wc -l < {reports}/{EPIC-ID}-files.txt`, and the per-directory counts `cut -d/ -f1 {reports}/{EPIC-ID}-files.txt | sort | uniq -c`. Then, for each `### ` section of the path-to-command table, with `{glob}` = the heading text inside its backticks: `git diff --name-only {base}...HEAD -- ':(glob){glob}' > {reports}/{EPIC-ID}-rows.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-rows.txt` (read the count). `1` or more selects the section. `0` → check the glob is valid: `git ls-files -- ':(glob){glob}' > {reports}/{EPIC-ID}-glob.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-glob.txt` — `1` or more: nothing it covers changed → "not applicable", with both commands and their counts as evidence; `0`: the glob matches no file in the repository → BLOCKED naming it only when the glob still contains a backtick or the brief's THE ROWS selects that section; otherwise "not applicable: matches no file in the repository (a planned component)" in DETAILS — WHY: a section written before its component exists must not block every gate. A non-zero git exit → BLOCKED. Step 0 runs when quality-gate.md declares it. For the report's Row selection, record `git rev-parse {base}` and `git merge-base --is-ancestor {base} HEAD; echo "exit=$?"` (`0` = an ancestor) — "not an ancestor" is recorded, never red. State the rows; where they differ from the brief's THE ROWS, run the union and name the difference in DETAILS.
 2. **Prove the tree.** In the merge worktree: `git rev-parse HEAD` (must equal `{sha}`), `git rev-parse 'HEAD^{tree}'`, `git status --porcelain | wc -l` (must print `0`). With a runner slot, the same three on the slot (Remote procedure, step 2): HEAD and tree hash equal on both sides, both counts `0`.
 3. **Two phases, in this order.** Your brief's LAYOUT line says which rows are stackless; with no LAYOUT, phase 1 is Step 0 and the scan, and every selected row runs in phase 2.
    - **Phase 1 — merge worktree, no stack:** Step 0 (the content guard, if declared); the stackless rows; the merge-artefact scan: `git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- . > {reports}/{EPIC-ID}-markers.txt; echo "exit=$?"`. Exit `1` = no hit = green (record `0 markers`, not an exit 0); exit `0` = hits: the in-scope count is `grep -cE ':[0-9]+:(<<<<<<<|>>>>>>>)' {reports}/{EPIC-ID}-markers.txt` (read the count; `1` or more is red), and `=======`-only lines (a heading underline, a fixture) go under Out-of-scope defects with file:line; any other exit = the scan did not run: red. Then the control, which shows the scan live: `printf '%s\n' '<<<<<<< HEAD' > {reports}/{EPIC-ID}-marker-control.txt` and `git -C {reports} grep --no-index -cE '^(<<<<<<<|=======|>>>>>>>)' -- {EPIC-ID}-marker-control.txt` → `{EPIC-ID}-marker-control.txt:1`.
@@ -89,7 +87,7 @@ Legend: `{sha}` and `{N}` = the SHA and run number in your brief; `{step}` = a `
 6. **On a red step, fix NOTHING.** Stop — every later step is "not run, stopped at the first red step" — and report OUTCOME: FAILED with the failing command, its output lines (≤ 20, from the log) and a reproduction (command, directory, SHA). If it matches a class in the brief's LESSONS line, name the class, the call sites or test, and the commit that introduced it. Re-run a failing test alone 3 times as a diagnostic (*Default, not law: record a deviation in DETAILS*): a pass among them makes it flaky — the step stays red; report `failed {x} of {y}`.
 7. **Write the report** in the `docs/templates/batch-gate-report-template.md` format to the `REPORT FILE` path in your brief (under `{reports}`): verdict, row selection, sync check (runner only), this run's step table, earlier runs, spot-checks (only when the brief asks; else "none requested"), out-of-scope defects with flaky tests, the state left behind. The envelope stays under your brief's cap; the tables live in the file.
 
-**A re-run** (the brief says run N ≥ 2 and names the failed step): steps 1–2 on the new SHA; then start from the failed step — first re-running the Format and static-analysis rows of every selected section whose code changed after they passed: `git diff --name-only {previous run's sha} HEAD -- ':(glob){glob}' > {reports}/{EPIC-ID}-rows.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-rows.txt` prints `1` or more (a non-zero git exit → BLOCKED). `up` runs again before the first stack step (*Default, not law: skip it only on concrete grounds, and record the rationale in the report's Sync check*). Earlier runs stay in the report as `## Run {k} — tree {sha} (FAILED, kept for the record)`, copied from the previous report your brief names. A brief with no failed step (a first run, a re-gate) runs every step.
+**A re-run** (the brief says run N ≥ 2 and names the failed step): steps 1–2 on the new SHA; then start from the failed step — first re-running the Format and static-analysis rows of every selected section whose code changed after they passed: `git diff --name-only {previous run's sha} HEAD -- ':(glob){glob}' > {reports}/{EPIC-ID}-rows.txt; echo "exit=$?"`, then `wc -l < {reports}/{EPIC-ID}-rows.txt` prints `1` or more (a non-zero git exit → BLOCKED). `up` runs again before the first stack step (*Default, not law: skip it only on concrete grounds, and record the rationale in the step table's `up` row*). Earlier runs stay in the report as `## Run {k} — tree {sha} (FAILED, kept for the record)`, copied from the previous report your brief names. A brief with no failed step (a first run, a re-gate) runs every step.
 
 ### Remote procedure (your brief's STACK line names `runner {NN} slot {x}`)
 
@@ -98,7 +96,6 @@ Read the contract first: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/
 1. Set the slot up: `runner-slot {NN} {x} {sha}; echo "exit=$?"` (runners.md, slot set-up) — a SHA, never a branch name: a branch can move between set-up and run.
 2. Prove the tree on the slot: `RUN_STEP_STATE={reports}/run-step {run-step} start {NN} {x} tree-r{N} -- "git rev-parse HEAD 'HEAD^{tree}' && git status --porcelain | wc -l"`, then its `wait` — both hashes equal the merge worktree's, the count is `0`.
 3. Every phase-2 step: write its command to a file with a quoted heredoc (never inline it as `'{command}'` — a quote inside it breaks the call), then `start` and `wait`:
-
    ```
    cat > {reports}/{EPIC-ID}-{step}.cmd <<'EOF'
    {command}
@@ -106,7 +103,6 @@ Read the contract first: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/
    RUN_STEP_STATE={reports}/run-step {run-step} start {NN} {x} {step} -- "$(cat {reports}/{EPIC-ID}-{step}.cmd)"; echo "exit=$?"
    RUN_STEP_STATE={reports}/run-step {run-step} wait {NN} {x} {step} --expect '{ERE}'; echo "exit=$?"
    ```
-
    `--expect '{ERE}'` = the counter pattern of the step's `Green means` — required whenever `Green means` names a counter; `--allow-empty` instead only when `Green means` is silence. Call `wait` with the Bash tool timeout at 600000 ms, or add `--timeout 100` at the default tool timeout.
 
    | `wait` result (its meaning: runners.md) | You do |
@@ -114,7 +110,7 @@ Read the contract first: `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-dispatch/references/
    | `0` | green: quote the summary line and the counter |
    | `124` — still running | `wait` again, same name; never a second `start` while it runs. Still 124 after twice the step's last measured time (the precedent report; none: 2 h — *Default, not law: record a deviation in DETAILS*): check the runner is up; a runner that is down is an outage → BLOCKED |
    | `2` — a malformed call | fix the call and call again — never red |
-   | `3` — the last start failed, no start recorded, or the result belongs to another start | never read that result; `start` the step again, once |
+   | `3` — the last start failed, no start recorded, or the result belongs to another start | never read that result; fix the cause, then `start` once more; a second failure → BLOCKED |
    | `3` — the step died without a result | `start` it again, once; a second death → BLOCKED |
    | `3` — the transport failed | `wait` again, once; a second transport failure is an outage |
    | `3` — empty log, or no `--expect` match | red, with two exceptions, each a new `wait` with no new `start`: the step's `Green means` is silence (add `--allow-empty`); the tail shows the counter line your pattern missed (correct `--expect`) |
@@ -145,10 +141,10 @@ EVIDENCE:
 - {each quality-gate command}: {actual result}             [standard, regression]
 - AC coverage: {list: AC-1 → test name → pass/fail}        [standard; regression: the spot-checks]
 - merge-artifact scan: {clean | findings}                  [regression; batch gate: `0 markers` or the in-scope count, + the control]
-- worktree: {path} at {main sha}; removed, exit {code}     [regression-epic]
+- worktree: {path}; porcelain {count}; stack down          [regression-epic]
 - rows: {Step 0, {glob}, …; not applicable: {glob} → 0}    [batch gate]
 - tree: {sha} / {tree hash}{; slot {x}: identical}         [batch gate]
-- {step}: {count}, exit {code}                             [batch gate: one line per step, in order; "not run" after a red step]
+- {step}: {count}, exit {code}                             [batch gate: one line per step, in order; "not run" after a red step; a runner step: the runners.md section 5 line]
 FILES:
 - {test files created} | none                              [regression, batch gate: none]
 REPORT FILE: {the REPORT FILE path from your brief}        [batch gate only]
@@ -191,4 +187,4 @@ DETAILS: {per failure: exact reproduction steps, expected vs actual}
 - Edit `docs/state/*.json` — report; the PM writes state.
 - Pass an item with skipped/flaky tests unmentioned, or with any prior-feedback item unverified.
 - Fail an item for a defect outside its acceptance criteria, or propose stories/scope — out-of-scope defects go in their section.
-- Batch gate: fix a red step, run steps in parallel, set a slot up at a branch name, accept a runner result not bound to this start, report an outage as FAILED, or run a destructive reset. Any mode: write logs, listings or runner state into a worktree, or run the regression on `main` in the main working copy.
+- Batch gate: fix a red step, run steps in parallel, set a slot up at a branch name, accept a runner result not bound to this start, report an outage as FAILED, or run a destructive reset. Any mode: write logs, listings or runner state into a worktree, or run the regression on `main` in the main working copy or add/remove its worktree.
