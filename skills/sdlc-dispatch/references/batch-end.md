@@ -2,7 +2,7 @@
 
 A fast-lane batch proves itself once: `main` is merged into the feature, one batch fix, the full gate, one delivery merge to `main`. This procedure is LAW step by step; only the tables marked *Default* are defaults. The epic machine, the `batch` object and its stages, the transitions, the schemas and the fixed log notes live in `${CLAUDE_PLUGIN_ROOT}/skills/sdlc-state/SKILL.md` (§4 Epic, §5, §6, §7) — cited here, never restated. **Classic lane:** the Deploy flow in `commands/start.md`.
 
-**Legend.** `{EPIC-ID}` the epic · `{feature}` its `branch` · `{merge}` = `{worktree_dir}/{EPIC-ID}-merge` · `{reports}` = `{worktree_dir}/.reports` · `{n}` = `batch.n` · `{N}` a gate run number (`batch.gate_run` after its increment) · `{main}` = `origin/main` after `git fetch origin` when a remote exists (`git remote | grep -c .` prints ≥ 1), else `main` · `(remote only)` = skip the command without a remote · `{excludes}` = one `':(exclude){prefix}'` per `process.docs_only_paths` entry (fast preset: `':(exclude)docs/' ':(exclude).claude/'`) · "the next epic" = the first epic after this one in `priority_order`. Commands run from the main checkout unless `-C` names a worktree; counts are read as counts, exit codes on their own line (`references/evidence-and-shell.md`).
+**Legend.** `{EPIC-ID}` the epic · `{feature}` its `branch` · `{merge}` = `{worktree_dir}/{EPIC-ID}-merge` · `{reports}` = the ABSOLUTE path of `{worktree_dir}/.reports` in the main checkout (sdlc-state §1) · `{n}` = `batch.n` · `{N}` a gate run number (`batch.gate_run` after its increment) · `{main}` = `origin/main` after `git fetch origin` when a remote exists (`git remote | grep -c .` prints ≥ 1), else `main` · `(remote only)` = skip the command without a remote · `{excludes}` = one `':(exclude){prefix}'` per `process.docs_only_paths` entry (fast preset: `':(exclude)docs/' ':(exclude).claude/'`) · "the next epic" = the first epic after this one in `priority_order`. Commands run from the main checkout unless `-C` names a worktree; counts are read as counts, exit codes on their own line (`references/evidence-and-shell.md`).
 
 ## Every stage change (LAW)
 
@@ -14,7 +14,7 @@ git add -- docs/state {documents this step wrote}
 git commit -m "{PREFIX}: Update state — {EPIC-ID} {old stage}→{new stage} [by PM]" -- docs/state {documents this step wrote}
 ```
 
-Every other decision line below: this shape with `"trigger":"decision"` and its fixed note, verbatim (sdlc-state §7). Dispatch line: `"trigger":"dispatch: {Role} ({mode})","note":"base {sha}, stack {local | runner {NN} slot {x} | none}"`; report line: `"trigger":"report: {Role} {OUTCOME}","note":"{head sha}, {counts}"`. Model per dispatch: sdlc-dispatch §1 with the model key each step names. Narration: start.md's batch-end line, `⏭ {EPIC-ID} «{title}» batch {n}: {stage} — {what happens, one clause}`. After a session restart, an epic whose `batch.stage` is set re-enters that stage's step from its start; a dispatch whose report never arrived is re-dispatched (recovery reference).
+Every other decision line below: this shape with `"trigger":"decision"` and its fixed note, verbatim (sdlc-state §7). Dispatch line: `"trigger":"dispatch: {Role} ({mode})","note":"base {sha}, stack {local | runner {NN} slot {x} | none}"`; report line: `"trigger":"report: {Role} {OUTCOME}","note":"{head sha}, {counts}"`. Model per dispatch: sdlc-dispatch §1 with the model key each step names. Narration: start.md's batch-end line, `⏭ {EPIC-ID} «{title}» batch {n}: {stage} — {what happens, one clause}`. After a session restart, an epic whose `batch.stage` is set — and that is not `held` (a held epic waits for its gate answer or a directive, sdlc-state §4) — re-enters that stage's step from its start; a dispatch whose report never arrived is re-dispatched (recovery reference).
 
 ## 0. Trigger — stage `null` → `triage`
 
@@ -54,6 +54,7 @@ Decide what the batch fix carries before anything merges — so nothing found he
 Precondition: Deploy exclusivity for target `{feature}` (sdlc-dispatch §2).
 
 1. Merge worktree — `git worktree list | grep -cF '/{EPIC-ID}-merge '` → `0` means missing: `git worktree add {merge} {feature}; echo "exit=$?"`. Whenever `jq -r '.worktrees["{EPIC-ID}-merge"] // "missing"' docs/state/project.json` prints `missing` — the directory new or not — register `"{EPIC-ID}-merge"` in `project.json.worktrees` (sdlc-state §6).
+1b. Nothing to merge? `{main}` = `origin/main` (remote; `git -C {merge} fetch origin` first) or `main`: `git -C {merge} merge-base --is-ancestor {main} HEAD; echo "exit=$?"` → `exit=0` means `main` is already in the feature: no Deploy dispatch — decision `main-in skipped: main already in the feature`, `{main-in}` = `git -C {merge} rev-parse HEAD`, continue as the MERGED row. `exit=1` → step 2.
 2. Dispatch Deploy — `briefs/deploy.md` "Deploy — main-in / feature-in (F5)", main-in; teammate `deploy-{EPIC-ID}`; model key `Deploy:main_in`; dispatch line `dispatch: Deploy (main in)`.
 3. Verified report → report line with `{main-in}` = its `merge:` SHA (`merge: none — already up to date` → `git -C {merge} rev-parse HEAD`). No status change (sdlc-state §4 Epic):
 
@@ -101,7 +102,7 @@ git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only
 
 ## 4. Full gate — stage `gate`
 
-1. Stack: `integrations.runners.enabled` is true and a slot is free (runners reference) → `"runner {NN} slot {x}"`; else room in the local budget (sdlc-dispatch §2) → `"local"`; else queue, narrate, dispatch stackless work meanwhile. Set it on the `{EPIC-ID}-merge` worktree entry.
+1. Stack: no selected gate section needs a stack (quality-gate.md's precondition is `none`) → `"none"`; otherwise `integrations.runners.enabled` is true and a slot is free (runners reference) → `"runner {NN} slot {x}"`; else room in the local budget (sdlc-dispatch §2) → `"local"`; else queue, narrate, dispatch stackless work meanwhile. Set it on the `{EPIC-ID}-merge` worktree entry.
 2. `{head}` = `git -C {merge} rev-parse HEAD`. Dispatch QA — `briefs/qa.md` "QA — batch gate (F7)" at `{head}`, REPORT FILE `{reports}/{EPIC-ID}-batch{n}-gate-run{gate_run + 1}.md`; after a fix loop the brief names the failed step to re-run from. Teammate `qa-{EPIC-ID}-run{gate_run + 1}`; model key `QA:batch_gate`; dispatch line `dispatch: QA (full gate)`.
 3. Verify (sdlc-dispatch §3) plus: the report's run SHA equals `{head}` — a run on another SHA is not this run. Clear `stack`.
 4. PASSED or FAILED → `gate_run` + 1 (= `{N}`); copy the report file to `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md` — every run, PASSED or FAILED (sdlc-state §6):
@@ -206,6 +207,7 @@ An epic with a `milestone`, in the same response as its `→ done` (after the ar
 
 1. Refinement: a milestone with a `slice_doc` is `planned` or `in_progress` → that plan is the live refinement: decision `refinement skipped: {MS-ID} plan is live`. Otherwise dispatch the Product Manager refinement (`briefs/planning.md`). What is planned next: `process.planning_depth` (milestones reference §8).
 2. Demo per `process.demo_gate` — the milestones reference §7 (`on_request`: decision `demo offered on request ({MS-ID | EPIC-ID})`, continue, offer it when the user next speaks; `blocking`: the demo gate in `commands/start.md`; `off`: nothing; `--no-human`: as `off`).
+3. Next: pick the next epic by `priority_order` and continue the implementation loop (start.md Step 3) — a fast-lane delivery ends here, exactly like the classic Deploy flow's step 5.
 
 ## Cut a batch (PM action)
 

@@ -58,7 +58,7 @@ stories: {ITEM-ID, ITEM-ID | none | unchanged}
 | a link to a `delivered` milestone | that link's line is the transition `delivered → in_progress` (sdlc-state section 5) |
 | an epic already `in_progress` or later is linked to a `planned` milestone | run the recut check (section 4) now; it passes → `planned → in_progress` in the same response as the link |
 | the epic belongs to another milestone | unlink it there first (its own line), then link — an epic belongs to at most one milestone |
-| the epic is `done` (archived) | refuse; narrate `{EPIC-ID} is delivered — only epics not yet done can join a milestone` (orchestration never reads the archive) |
+| the epic is `done` (archived) | refuse; narrate `{EPIC-ID} is delivered — only epics not yet done can join a milestone` (orchestration never reads the archive); if the whole demo needs only delivered work, the user may say so — then the milestone goes `planned → delivered` on their word with no epics (sdlc-state section 5) and the demo is offered per section 7 |
 | the story's epic is linked whole to any milestone | refuse and narrate — the uncut exception is only for items of an epic NOT linked whole |
 | an unlink leaves every linked epic `done` and every linked story delivered | apply `in_progress → delivered` (section 5, step 4) |
 

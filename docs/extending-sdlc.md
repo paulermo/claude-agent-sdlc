@@ -34,8 +34,8 @@ Naming law: agent = persona (`Developer`), skill = discipline (`story-implementa
 A kind that shares the story machine — like `bug` — is NOT a new task type: it is a `kind` value on entries in the `stories` map, plus its rows in the tier table and the transition table of `skills/sdlc-state/SKILL.md`, a brief template, and dispatch-map rows. Reach for a new type only when the status machine itself differs.
 
 1. Choose an ID scheme: `{PREFIX}-{TYPE}-{N}`, a counter in `project.json.counters`, a branch convention `{type}/{ID}-{slug}`.
-2. Create `docs/state/{type}-tasks.json` (seed `{}` in init.md) and define the entry schema in `skills/sdlc-state/SKILL.md` §5 — that file is the single source of truth for shapes.
-3. Define the status machine in `skills/sdlc-state/SKILL.md` §3 and its transitions in §4 (who dispatches, which OUTCOME moves it where).
+2. Give it its own map in the bucket files (`active.json` / `backlog.json` / the archive month files — a new key beside `stories` and `content_tasks`, seeded in init.md's templates and added by its repair step) and define the entry schema in `skills/sdlc-state/SKILL.md` §6 — that file is the single source of truth for shapes.
+3. Define the status machine in `skills/sdlc-state/SKILL.md` §4 and its transitions in §5 (who dispatches, which OUTCOME moves it where, in which lane).
 4. Add dispatch-map rows in `commands/start.md` and brief templates for the handling agents.
 
 ## Adding a lane-dependent rule

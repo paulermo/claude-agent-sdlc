@@ -55,15 +55,17 @@ Dispatch by the agent's **registered name** — never by file path — with the 
 
 - Parallel-safe: agents whose **file sets don't overlap** (different items in different worktrees). One item = one worktree = one agent at a time.
 - **Teammate cap:** `max_parallel_teammates` counts WORKING agents (idle ones awaiting release occupy no slot).
-- **Stack budget:** at most `process.max_local_stacks` (absent: 2) agents may hold a running Docker stack on this machine at once. Count: `jq '[.worktrees[] | select(.stack == "local")] | length' docs/state/project.json`. Set a worktree's `stack` when you dispatch an agent that brings a stack up (`"local"`, or `"runner {NN} slot {x}"` — runner slots do not count against the local budget), clear it at release. Stackless agents (planning roles, a Reviewer whose brief has `STACK: none`) never count. When the budget is full, queue the stack-bound dispatch, pair it with stackless work (planning, an Architect pre-ruling), and narrate the wait. The two caps are independent. WHY: six agents each bringing up a ten-container stack once thrashed a laptop until the container VM killed services and none of the six finished.
-- Planning agents (Product Manager → System Analyst → Architect) are **sequential** within one epic's planning chain — each consumes the previous one's artifacts. Each works in its own worktree (`{worktree_dir}/{ROLE}-{topic}`), never in the main checkout.
+- **Stack budget:** at most `process.max_local_stacks` (absent: 2) agents may hold a running Docker stack on this machine at once. Count: `jq '[.worktrees[] | select(.stack == "local")] | length' docs/state/project.json`. Set a worktree's `stack` when you dispatch an agent that brings a stack up (`"local"`, or `"runner {NN} slot {x}"` — runner slots do not count against the local budget), clear it at release. Stackless agents (planning roles, a Reviewer whose brief has `STACK: none`) never count. Who needs a stack: a Developer or Reviewer of an item whose project gate says `Stack: needed` in `.claude/rules/quality-gate.md` §Per story (`none` → `STACK: none`); QA always per its mode; planning roles never. A freed slot goes to the waiting item first in `priority_order` (then by item number). When the budget is full, queue the stack-bound dispatch, pair it with stackless work (planning, an Architect pre-ruling), and narrate the wait. The two caps are independent. WHY: six agents each bringing up a ten-container stack once thrashed a laptop until the container VM killed services and none of the six finished.
+- Product Manager dispatches never run in parallel with each other (initial planning, refinement, milestone, recut) — each reshapes the epic set and `priority_order`; queue the later one. Planning agents (Product Manager → System Analyst → Architect) are **sequential** within one epic's planning chain — each consumes the previous one's artifacts. Each works in its own worktree (`{worktree_dir}/{ROLE}-{topic}`), never in the main checkout.
 - Same-role parallelism is fine (three Developers on three items); the constraint is file ownership, not role uniqueness.
 - **Deploy exclusivity** per `process.deploy_exclusivity` (absent: `per_epic`):
 
   | Value | Rule |
   |---|---|
-  | `per_target_branch` | one merge INTO a given branch at a time; later merges into it queue (decision `merge queued behind {ITEM-ID}'s`). Merges into different branches may run together (a delivery to `main` beside a main-in into another feature), and Developers/Reviewers on other branches keep working |
+  | `per_target_branch` | one merge INTO a given branch at a time — a PM fast-forward into it counts as a merge; later merges into it queue (decision `merge queued behind {ITEM-ID}'s`). Merges into different branches may run together (a delivery to `main` beside a main-in into another feature), and Developers/Reviewers on other branches keep working |
   | `per_epic` (1.6) | never two merges at once, and never a merge while any agent works on a branch of the same epic |
+
+  WHY: two merges into one branch race for its tip, and the loser either overwrites the winner's push or merges into a tree nobody verified. An item with a merge fix in flight (`{ITEM-ID}-merge-fix` worktree entry) is not merged again until the merge fix reports.
 
 ## 3. Verify after every completion — never trust, always verify
 
@@ -75,9 +77,9 @@ When an agent finishes, BEFORE applying any transition (evidence rules: `referen
 | Evidence is real | EVIDENCE lines contain actual results (counts, exit codes, paths) — not adjectives; fast lane: every targeted command carries its `selected because` reason |
 | Artifacts exist | spot-check 1-2 FILES entries with Read/Glob (in the agent's worktree if applicable) |
 | Report file present | when the brief named a `REPORT FILE`: `test -s {path}; echo "exit=$?"` → `exit=0` |
-| Work is committed | `git -C {worktree} log --oneline -3` shows the agent's commits with the `[by {Role}]` convention |
-| No attribution trailers | `git -C {worktree} log --format=%B {base}..HEAD \| grep -ciE 'co-authored\|generated with claude\|claude-session'` → `0` (a count — read it, not the exit status). Non-zero on a commit not yet pushed: amend it yourself (permitted plumbing); already pushed: re-dispatch the agent to amend + surface to the user |
-| State untouched by agent | `git -C {worktree} diff --name-only {base-branch}` does NOT list `docs/state/` files |
+| Work is committed | `git -C {worktree} log --oneline -3` shows the agent's commits with the `[by {Role}]` convention (not for read-only roles — Reviewer, Content Reviewer, Architect Review Mode, QA in regression and batch-gate modes: they commit nothing) |
+| No attribution trailers | `git -C {worktree} log --format=%B {base}..HEAD > {reports}/{ITEM-ID}-msgs.txt`; `jq -r '(.process.attribution_patterns // ["co-authored-by", "generated with claude", "🤖", "claude-session"])[]' docs/state/project.json > {reports}/patterns.txt`; `grep -ciF -f {reports}/patterns.txt {reports}/{ITEM-ID}-msgs.txt` → `0` (a count — read it, not the exit status; skip when `commit_attribution` is `true`). Non-zero on a commit not yet pushed: amend it yourself (permitted plumbing); already pushed: re-dispatch the agent to amend + surface to the user |
+| State untouched by agent | `git -C {worktree} diff --name-only {base}` does NOT list `docs/state/` files (`{base}` = the branch the worktree was cut from: the feature for items and fixes, `main` for planning and rulings) |
 | Runner evidence | when `STACK` named a runner slot: every runner step in EVIDENCE came through `run-step wait` with its exit read on its own line, and names the slot (runners reference) |
 
 | Situation | Action |
@@ -102,13 +104,13 @@ After the transition (sdlc-state section 5), mine every report ONCE for the item
 |----------------|------|--------|
 | Reviewer / QA `REPORT FILE` | both | copy it to `docs/reviews/{ITEM-ID}-{round}.md` (review) or `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md` (batch gate, every run — sdlc-state section 6); store the review path in `review_feedback`; commit with the state (by path) |
 | Reviewer `## Follow-ups` entries (any verdict) | both | append each as one `- [ ] FU-{n} · …` line to `docs/issues/{EPIC-ID}-{slug}/followups.md` (`n` = `counters.followup` + 1; create the file with its heading if missing — format in sdlc-state section 4); commit with the state |
-| Reviewer `## Notes` entries (any verdict) | fast | append each as one `- [ ] N-{n} · {category} · …` line under a heading for the review in `docs/reviews/{EPIC-ID}-notes.md` (`n` = `counters.note` + 1; create from `docs/templates/notes-file-template.md` if missing); commit with the state |
+| Reviewer `## Notes` entries (any verdict) | fast | append each as one `- [ ] N-{n} · {category} · …` line (the category exactly as the Reviewer wrote it) under a heading for the review in `docs/reviews/{EPIC-ID}-notes.md` (`n` = `counters.note` + 1; create from `docs/templates/notes-file-template.md` if missing); commit with the state |
 | Developer `follow-ups closed: FU-…` | both | tick those lines with `— **closed by {ITEM-ID}:** {how}` |
 | Developer `REFERENCE CHECK:` lines | both | quote them in the Reviewer brief's `CARRIED IN` (write `none` when there are none); longer than ~600 characters → save them to `{reports}/{ITEM-ID}-reference-checks.md` and `CARRIED IN` names that path |
 | Developer `OUT OF SCOPE` / QA `## Out-of-scope defects`, size small (≤ 5 lines, 1 file) | both | one follow-up line |
 | same, size larger | both | register ONE bug (sdlc-state section 4 — Bug; procedure in start.md) with the report path as `origin`; record from `docs/templates/bug-template.md` |
 | QA regression FAILED (feature branch), Deploy MERGE_FAILED / VERIFICATION_FAILED | classic | register ONE bug from the report (tier = the failed item's tier) |
-| Deploy VERIFICATION_FAILED / MERGE_FAILED (story merge) | fast | dispatch a merge-fix Developer on `fix/{ITEM-ID}-merge` (briefs/developer.md) — **no bug** |
+| Deploy VERIFICATION_FAILED / MERGE_FAILED (story merge) | fast | dispatch a merge-fix Developer (briefs/developer.md) — VERIFICATION_FAILED: on the fix branch exactly as Deploy's report names it; MERGE_FAILED: in the item's worktree, merging the feature in (start.md Merge flow) — **no bug** |
 | QA batch gate FAILED | fast | the fix loop (batch-end reference) — **no bug** |
 | QA regression on `main` FAILED | both | ONE bug in the epic; epic → `in_progress` (sdlc-state section 5) |
 | Reviewer `Rule gap:` proposal | both | a later item builds on it → a ruling now (rulings reference); otherwise keep it for the Architect's next Design Mode brief |
@@ -135,7 +137,7 @@ TaskStop takes the bare teammate name and stops the session one-sidedly — safe
 | Report verified, transition committed | teams: release immediately, before narrating and dispatching the next batch · fallback: nothing to do |
 | Report failed verification (envelope/evidence/artifacts missing, report truncated) | do NOT release — message the SAME agent by name (SendMessage resumes a finished agent from its transcript, in both modes) to fix or complete its report; teams: release after acceptance |
 | Work interrupted, not finished (usage-limit reset, dropped connection, a BLOCKED report whose blocker is now resolved) | message the SAME agent to continue — the recovery reference has the exact messages |
-| Item rejected later (`review_rejected`, `qa_rejected`) | released stays released — rework is a FRESH dispatch (`{role}-{ITEM-ID}-fix` in the fast lane) with the feedback brief, in both modes |
+| Item rejected later (`review_rejected`, `qa_rejected`) | released stays released — rework is a FRESH dispatch (`{role}-{ITEM-ID}-fix`, both lanes) with the feedback brief, in both modes |
 
 Shutdown is asynchronous (the teammate finishes its current tool call first) — do not wait for confirmation; continue your loop.
 

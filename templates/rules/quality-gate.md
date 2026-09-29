@@ -25,8 +25,8 @@ project may switch its lane later, and a fast epic cannot start while §Per stor
 - Evidence is a counter, an exit code or a diff — never silence. A run that selected or evaluated nothing is red.
 - An exit code is read from the command itself, on the next line (the plugin's `evidence-and-shell.md` reference).
 - A component "not present yet" is red, not a skip.
-- After a fix, re-run from the step that failed — and re-run `{formatter}` and `{static analysis}` first if code
-  changed after they passed.
+- After a fix, re-run from the step that failed — and first re-run every earlier step whose inputs the fix changed
+  (at least `{formatter}`, `{lint}` and `{static analysis}` when code changed after they passed).
 
 ## Step 0 — every change
 
@@ -65,6 +65,9 @@ same change. WHY: a story that added a table and a queue activity once left two 
 branch and on `main` until a later story's Developer stumbled on them.
 
 ## Per story: the targeted set
+
+Stack: {needed — the targeted tests need a running stack (`{up command}`) | none}. The PM gives a Developer or Reviewer a
+stack only when this line says `needed`.
 
 1. Red first: write the test for the new or fixed behavior, see it fail, quote the failure.
 2. Step 0.

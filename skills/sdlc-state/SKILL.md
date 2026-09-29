@@ -58,7 +58,7 @@ Bulk moves happen at exactly TWO epic transitions, always whole-epic, never per 
 | `ready` → `in_progress` (you dispatch its first item) | ALL its items: backlog.json → active.json |
 | `deployed` → `done` (main regression passed or skipped by policy) | ALL its items + the epic entry → `archive/done-{YYYY-MM of today, UTC}.json`; remove the epic from `priority_order` |
 
-A story's own `done` does NOT archive it — done stories stay in active.json until the epic completes, so "every epic item done → ready_for_deploy" remains a presence check, never an absence check. New items register directly into the bucket the law dictates (a bug of an in-flight epic → active.json; planning output → backlog.json; a directive bug against a not-started epic → backlog.json). An epic that returns `deployed` → `in_progress` (a cut batch delivered with items left, or a failed main regression — section 5) keeps its items in active.json: both statuses are active, nothing moves. **A milestone recut** re-parents items to a remainder epic registered as `ready`: each re-parented item moves to the file its NEW epic's status dictates (remainder `ready` → `backlog.json`), destination first, in the same response as its `recut` log line (milestones reference).
+A story's own `done` does NOT archive it — done stories stay in active.json until the epic completes, so "every epic item done → ready_for_deploy" remains a presence check, never an absence check. New items register directly into the bucket the law dictates (a bug of an in-flight epic → active.json; planning output → backlog.json; a directive bug against a not-started epic → backlog.json). An epic that returns `deployed` → `in_progress` (a cut batch delivered with items left, or a failed main regression — section 5) keeps its items in active.json: both statuses are active, nothing moves. **A milestone recut** re-parents items to a remainder epic registered as `ready`: each re-parented item moves to the file its NEW epic's status dictates (remainder `ready` → `backlog.json`), destination first, in the same response as its `recut` log line (milestones reference). An item registered while its epic's batch end is running (`batch.stage` set) — other than the triage hygiene bug — does not join that batch: the PM cuts the batch first (start.md, bug registration), so the new item waits for the next batch.
 
 **Milestones never move.** They live in `epics.json` (`milestones` + `milestone_order`) for their whole life, `demoed` ones included; the bucket law does not apply to them. An archived epic keeps its `milestone` field in the archive. WHY: a milestone spans epics in different buckets — moving it with any one of them would split its links.
 
@@ -102,7 +102,7 @@ PM MUST NOT apply a transition from a report whose EVIDENCE section is empty or 
 The lane decides how an item proves itself and how an epic reaches `main`. It is stamped **per epic**:
 
 - `project.json.process.lane` (`fast` | `classic`) is the lane for epics that START from now on.
-- When the PM applies epic `ready` → `in_progress`, it writes `"lane": "{process.lane}"` into the epic entry in the same response. From then on the epic follows its stamp until `done`, whatever `process.lane` says later — switching the project default never changes an epic in flight.
+- When the PM applies epic `ready` → `in_progress`, it writes `"lane": "{process.lane}"` into the epic entry (`"classic"` for a content epic) in the same response. From then on the epic follows its stamp until `done`, whatever `process.lane` says later — switching the project default never changes an epic in flight.
 - No stamp on the epic, or no `process` block at all → `classic`. Content epics (`"type": "cepic"`) are always `classic`.
 - An item's lane is its epic's: `jq -r '.epics["{EPIC-ID}"].lane // "classic"' docs/state/epics.json`.
 
@@ -240,7 +240,7 @@ cat docs/reviews/{EPIC-ID}-notes.md 2>/dev/null | grep -c '^- \[ \] N-'
 ```
 
 - `{n}` = `counters.followup` + 1, one project-wide sequence. `owner:` is optional — the item or epic that will touch the files, or a role (`System Analyst`, `Architect`) for prose and rule follow-ups, which that role's next dispatch closes. Closure texts: `— **closed by {ITEM-ID}:** {how}` · `— **closed by {EPIC-ID} batch fix ({sha}):** {how}` · `— **closed by {Role} ({dispatch}):** {how}` · `— **dropped:** {reason}` · `— **moved to {EPIC-ID}**`.
-- Fed from the Reviewer's `## Follow-ups` section, QA's `## Out-of-scope defects`, the Developer's `OUT OF SCOPE` lines, and NOTEs resolved `→ FU-{m}`. Closed by Developers in passing (their briefs point at the file: close entries whose instances lie in files they modify anyway; they report `FOLLOW-UPS CLOSED:` and the PM ticks the lines with the closure text).
+- Fed from the Reviewer's `## Follow-ups` section, QA's `## Out-of-scope defects`, the Developer's `OUT OF SCOPE` lines, and NOTEs resolved `→ FU-{m}`. Closed by Developers in passing (their briefs point at the file: close entries whose instances lie in files they modify anyway; they report `follow-ups closed:` and the PM ticks the lines with the closure text).
 - Also closed by the epic-end hygiene bug (`hygiene_bug`) or resolved at the batch-end triage (`triage`) — below.
 - Open-entry count (a count, never an exit code — never Read the file for this): `cat docs/issues/{EPIC-ID}-{slug}/followups.md 2>/dev/null | grep -c '^- \[ \]'`
 
@@ -259,7 +259,7 @@ Triage — *Default, not law: deviate only on concrete grounds, and record the r
 | gate-breaking or correctness, size larger | ONE hygiene bug for the epic, registered now; the batch waits for it |
 | infrastructure or operations hardening for things not built yet | `→ moved to {hardening EPIC-ID}` when the project has a deferred-hardening epic, else carried |
 | stale, or documentation-only | `— dropped: {reason}` |
-| everything else | carried: stays open with `owner:` = the epic that will touch its files |
+| everything else | carried: stays open with `owner:` = the epic that will touch its files; no later epic exists → `owner: backlog` (the next epic to start takes it over, start.md) |
 
 ### Return budget and parking (LAW)
 
@@ -308,6 +308,7 @@ planning → ready → in_progress → ready_for_deploy → deployed → done
 | `gate_run` | number of full-gate runs so far for this batch, re-gates included (0 before the first) — `{N}` in report names |
 | `red_runs` | number of those runs that were FAILED — the fix-loop bound counts these |
 | `gated_sha` | the feature SHA the last PASSED gate ran on — the only SHA the delivery may merge |
+| `fix_attempts` | dispatches of the current batch fix or fix loop (absent = 0) — the "failed twice" bound counts these; reset to 0 when `stage` moves to `gate` |
 
 After a delivery with items left, the PM resets it to `{"n": n + 1, "items": null, "stage": null, "gate_run": 0, "red_runs": 0, "gated_sha": null}`.
 
@@ -341,7 +342,7 @@ planned → in_progress → delivered → demoed
 |-------|-----------|
 | `not_started` | no BRDs exist |
 | `planning` | BRDs exist, some epic still `planning` |
-| `implementation` | at least one epic `ready`/`in_progress`/`ready_for_deploy`/`deployed` |
+| `implementation` | at least one epic `ready`/`in_progress`/`ready_for_deploy`/`deployed` — takes precedence over `planning` when both hold (start.md Step 3 runs planning beside it) |
 | `done` | `epics.json` `.epics` is empty (every epic archived) and BRDs exist |
 
 (The `phase` labels in the agent registry — planning/infrastructure/implementation/content/on_demand — are grouping labels for humans, NOT this enum.)
@@ -352,9 +353,9 @@ planned → in_progress → delivered → demoed
 
 | Lane | From | Event (agent report) | To | Also store / do |
 |------|------|----------------------|----|------------------|
-| both | epic `ready` | PM dispatches its first item | epic → in_progress | move ALL its items backlog → active (bucket law); stamp `"lane"`; a linked milestone `planned` → `in_progress` in the same response |
+| both | epic `ready` | PM dispatches its first item | epic → in_progress | move ALL its items backlog → active (bucket law); stamp `"lane"` (`"classic"` for a cepic); a linked milestone `planned` → `in_progress` in the same response |
 | both | todo / review_rejected / qa_rejected (not parked) | PM dispatches Developer | in_progress | assignee; fast lane: a dispatch from `review_rejected` is the fix pass (fresh `developer-{ITEM-ID}-fix`) |
-| both | in_progress | Developer IMPLEMENTED — story, or bug of tier standard/critical; fast lane: only when `returns == 0` | ready_for_review | tick `FOLLOW-UPS CLOSED` lines; route `OUT OF SCOPE` lines (follow-up or bug, section 4) |
+| both | in_progress | Developer IMPLEMENTED — story, or bug of tier standard/critical; fast lane: only when `returns == 0` | ready_for_review | tick `follow-ups closed:` lines; route `OUT OF SCOPE` lines (follow-up or bug, section 4) |
 | both | in_progress | Developer IMPLEMENTED — bug of tier light | ready_for_merge | decision line `"review skipped: light bug"` |
 | fast | in_progress | Developer IMPLEMENTED — fix pass (`returns == 1`), and the PM's diff check finds every named finding closed | ready_for_merge | decision line `"fix pass verified by the PM reading {a}..{b} against {finding ids}"` |
 | fast | in_progress | Developer IMPLEMENTED — fix pass, and the diff check finds a named finding still open | review_rejected, `"parked": true` | decision line `"budget exhausted (1/1): parked"`; budget gate |
@@ -369,11 +370,11 @@ planned → in_progress → delivered → demoed
 | classic | in_qa | QA FAILED | qa_rejected (or parked) | qa_feedback (path) + rejection_reason for content; returns rule |
 | classic | ready_for_merge | Deploy MERGED | merged | — |
 | classic | ready_for_merge | Deploy MERGE_FAILED / VERIFICATION_FAILED | ready_for_merge (unchanged) | register a bug from the report (tier = the item's tier) |
-| fast | ready_for_merge | PM fast-forward (the item branch contains the feature tip) | done | decision line `"fast-forward: {feature} {a}..{b}; worktree removed"`; remove the item worktree |
+| fast | ready_for_merge | PM fast-forward (the item branch contains the feature tip) | done | log line with `"trigger": "fast-forward"` and the note `"fast-forward: {feature} {a}..{b}; worktree removed"`; remove the item worktree |
 | fast | ready_for_merge | Deploy MERGED (story merge) | done | decision line `"regression QA skipped: fast lane"`; remove the item worktree |
-| fast | ready_for_merge | Deploy VERIFICATION_FAILED / MERGE_FAILED | ready_for_merge (unchanged) | dispatch a merge-fix Developer (`fix/{ITEM-ID}-merge`); dispatch line; **no bug** |
+| fast | ready_for_merge | Deploy VERIFICATION_FAILED / MERGE_FAILED | ready_for_merge (unchanged) | dispatch a merge-fix Developer — VERIFICATION_FAILED: on the fix branch exactly as Deploy's report names it (`fix/{ITEM-ID}-merge`, or `…-{k}`), worktree key `{ITEM-ID}-merge-fix`; MERGE_FAILED: in the item's own worktree (merge the feature in); `"fix_attempts"` + 1 on the item; dispatch line; **no bug** |
 | fast | ready_for_merge | Developer IMPLEMENTED (merge fix), PM diff check passes | done | the PM fast-forwards the feature to the fix head; log `"report: Developer (merge fix); PM verified the diff"` |
-| fast | ready_for_merge | merge fix: the diff check finds the collision still open, or the Developer reports BLOCKED | ready_for_merge (unchanged) | first time: re-dispatch once naming what is open; second time: item `held: "merge fix failed twice"`, surface to the user |
+| fast | ready_for_merge | merge fix: the diff check finds the collision still open, or the Developer reports BLOCKED | ready_for_merge (unchanged) | `fix_attempts` < 2: re-dispatch once naming what is open (`fix_attempts` + 1); `fix_attempts` = 2: item `held: "merge fix failed twice"`, surface to the user. `fix_attempts` is deleted when the item is `done` |
 | classic | merged | QA(regression) PASSED | done | — |
 | classic | merged | QA(regression) FAILED | regression_failed | regression_feedback (path); register a bug (active.json, tier = the item's tier) |
 | classic | every epic item done, `followups_gate: hygiene_bug`, open follow-ups > 0 | PM check | (epic unchanged) | register ONE hygiene bug from followups.md, then continue |
@@ -384,10 +385,11 @@ planned → in_progress → delivered → demoed
 | fast | `batch.stage` = `main_in` | Deploy (main-in) VERIFICATION_FAILED | (unchanged) | `stage` = `batch_fix`; the batch fix branches from `fix/{EPIC-ID}-main-in` |
 | fast | `batch.stage` = `main_in` | Deploy (main-in) MERGE_FAILED | (unchanged) | epic `held: "main-in conflict"`; surface to the user (a ruling may resolve it) |
 | fast | `batch.stage` = `batch_fix` or `fix_loop` | Developer IMPLEMENTED, PM diff check closes every named defect | (unchanged) | the PM fast-forwards the feature to the fix head; `stage` = `gate` (a fix loop: QA re-runs from the failed step) |
-| fast | `batch.stage` = `batch_fix` or `fix_loop` | diff check finds a defect still open, or BLOCKED | (unchanged) | first time: re-dispatch once naming it; second time: epic `held: "batch fix failed twice"` |
+| fast | `batch.stage` = `batch_fix` or `fix_loop` | diff check finds a defect still open, or BLOCKED | (unchanged) | `batch.fix_attempts` < 2: re-dispatch once naming it (`fix_attempts` + 1); = 2: epic `held: "batch fix failed twice"`. `batch.fix_attempts` resets to 0 whenever `stage` moves to `gate` |
 | fast | epic in_progress, `batch.stage` = `gate` | QA (batch gate) FAILED | (unchanged) | `gate_run` + 1 = `{N}`, `red_runs` + 1; save `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md`; decision `gate run {N} red: {step}`; `stage` = `fix_loop`; a fix-loop Developer; **no bug**. When `red_runs` reaches 3 (then 4, 5 … after each "one more run"): the fix-loop bound gate first — "one more run" → decision `fix loop bound: one more run`, continue; "park" (or `--no-human`) → epic `held: "fix loop bound"` |
 | fast | epic in_progress, `batch.stage` = `gate` | QA (batch gate) PASSED | (unchanged) | `gate_run` + 1 = `{N}`; `gated_sha` = the SHA the report names; save `docs/reports/{EPIC-ID}-batch{n}-gate-run{N}.md`; then the re-gate check (batch-end reference): `main` gained code → `stage` = `main_in`; otherwise `stage` = `books` |
 | fast | epic in_progress, `batch.stage` = `books` | PM: notes resolved, follow-ups handled | epic → ready_for_deploy | `stage` = `delivery` |
+| classic | ready_for_deploy | Deploy (epic merge) MERGE_FAILED / VERIFICATION_FAILED | epic → in_progress | register ONE bug in the epic from the report (origin = the report); the epic re-delivers after it |
 | both | ready_for_deploy | Deploy MERGED (to main) | epic → deployed | fast, `deploy_push: never` or no remote: fast-forward `main` to the `delivery/{EPIC-ID}-{n}` branch first (batch-end reference) |
 | fast | ready_for_deploy | Deploy (delivery) MERGE_FAILED — code arrived on `main`, or a code conflict | epic → in_progress | `batch.stage` = `main_in`, `gated_sha` = null (re-merge and re-gate) |
 | any | any | any agent OUTCOME: BLOCKED | (unchanged) | no transition — resolve the BLOCKERS (sdlc-dispatch section 3); an infrastructure outage waits, it is never a failure |
@@ -399,6 +401,7 @@ planned → in_progress → delivered → demoed
 | — | milestone planned | the first item of a linked epic or a linked story is dispatched, recut check passed | in_progress | same response as the epic's `ready` → `in_progress` |
 | — | milestone in_progress | the last linked epic is `done` and every linked story's batch is delivered | delivered | `delivered_at`; the delivery's decision line names the milestone and the count |
 | — | milestone delivered | an epic or a story is linked to it | in_progress | log line naming the addition |
+| — | milestone planned | the user says everything the demo needs is already delivered (no epic left to link) | delivered | `delivered_at`; `"trigger": "decision: user"`; nothing to plan or dispatch |
 | — | milestone delivered | the user says the demo ran | demoed | `demoed_at`, `closed_at`; `"trigger": "decision: user"` |
 
 Content tasks follow the same pattern with their extra statuses (`creating`, `ready_for_integration`, `integrating`; Content Reviewer/Integrator instead of Reviewer).
@@ -430,7 +433,7 @@ Story entry (inside `"stories"`):
 }
 ```
 
-There is NO `history` field — transitions go to `log.jsonl` (section 7). `kind` / `tier` / `returns` are defined in section 4 (Kinds, tiers, budgets); absent = `story` / `standard` / `0`. An item carries `"milestone": "{PREFIX}-MS-{n}"` ONLY when it is listed in a milestone's `stories` (the uncut exception) — otherwise its milestone is its epic's. `"parked": true` appears only while the item is parked (section 4, Return budget and parking); `"held": "{reason}"` only while it is held (section 4, Epic).
+There is NO `history` field — transitions go to `log.jsonl` (section 7). `kind` / `tier` / `returns` are defined in section 4 (Kinds, tiers, budgets); absent = `story` / `standard` / `0`. An item carries `"milestone": "{PREFIX}-MS-{n}"` ONLY when it is listed in a milestone's `stories` (the uncut exception) — otherwise its milestone is its epic's. `"parked": true` appears only while the item is parked (section 4, Return budget and parking); `"held": "{reason}"` only while it is held (section 4, Epic); `"fix_attempts": {n}` only while a merge fix is in flight (section 5).
 
 Bug entry (same map `"stories"`, so every reader of the map sees it):
 
@@ -453,7 +456,7 @@ Bug entry (same map `"stories"`, so every reader of the map sees it):
 }
 ```
 
-Counters: `project.json.counters` holds `brd`, `uc`, `epic`, `story`, `bug`, `note`, `followup`, `milestone`, `cp`, `cepic`, `ctask`. If an older `project.json` lacks one, add it with `0` when first needed (init also merges them on repair runs) — except `followup`: seed it with the highest `FU-{n}` already used (`cat docs/issues/*/followups.md 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1`, empty → 0), or new numbers collide with 1.6's per-epic ones.
+Counters: `project.json.counters` holds `brd`, `uc`, `epic`, `story`, `bug`, `note`, `followup`, `milestone`, `cp`, `cepic`, `ctask`. If an older `project.json` lacks one, add it with `0` when first needed (init also merges them on repair runs) — except `followup`: seed it with the highest `FU-{n}` already used (`find docs/issues -name followups.md -exec cat {} + 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1`, empty → 0), or new numbers collide with 1.6's per-epic ones.
 
 **Feedback fields hold a file path, never verbatim text:**
 
@@ -558,7 +561,7 @@ Milestone entry (inside `"milestones"`) and its order:
 { "epics": {}, "stories": {}, "content_tasks": {} }
 ```
 
-`docs/state/project.json` `worktrees` map — one entry per active worktree, keyed by `{ITEM-ID}`, or for epic- and planning-level worktrees by their directory name (`{EPIC-ID}-merge`, `{EPIC-ID}-batch-fix`, `{EPIC-ID}-gate-run{N}`, `{EPIC-ID}-main-regression`, `{ROLE}-{topic}`, `ARCH-{topic}`):
+`docs/state/project.json` `worktrees` map — one entry per active worktree, keyed by `{ITEM-ID}`, or for epic- and planning-level worktrees by their directory name (`{ITEM-ID}-merge-fix`, `{EPIC-ID}-merge`, `{EPIC-ID}-merge-fix` (feature-in), `{EPIC-ID}-batch-fix`, `{EPIC-ID}-gate-run{N}`, `{EPIC-ID}-main-regression`, `{EPIC-ID}-delivery`, `{ROLE}-{topic}`, `ARCH-{topic}`):
 
 ```json
 "{ITEM-ID}": {
@@ -569,7 +572,7 @@ Milestone entry (inside `"milestones"`) and its order:
 }
 ```
 
-Ports: allocate `app` starting at 3100, `db` at 5433, incrementing per active worktree (the numbers above are the first worktree's) — collisions break parallel Docker stacks. `stack`: `null` while the holder runs no stack, `"local"` while it runs a stack on this machine, `"runner {NN} slot {x}"` while it holds a runner slot — the PM sets it at dispatch and clears it at release (the stack budget in sdlc-dispatch section 2 counts `"local"` entries). Exception: a Developer's runner slot stays with the item until its review is verified — the Reviewer re-runs on the story's own slot (runners reference).
+`project.json.max_parallel_teammates` (absent: 4) caps working teammates (sdlc-dispatch section 2). An item's `assignee` = the teammate name it was dispatched to (`{role}-{ITEM-ID}`), or `subagent` in fallback mode. Ports: allocate `app` starting at 3100, `db` at 5433, for item worktrees at creation and for epic-level worktrees only when a stack runs there; incrementing per active worktree (the numbers above are the first worktree's) — collisions break parallel Docker stacks. `stack`: `null` while the holder runs no stack, `"local"` while it runs a stack on this machine, `"runner {NN} slot {x}"` while it holds a runner slot — the PM sets it at dispatch and clears it at release (the stack budget in sdlc-dispatch section 2 counts `"local"` entries). Exception: a Developer's runner slot stays with the item until its review is verified — the Reviewer re-runs on the story's own slot (runners reference).
 
 `docs/state/project.json` `process` block — how this project runs. **Absent block, absent key → the classic preset value.** `/agent-sdlc:init` writes the fast preset for a new project and the classic preset when it repairs a 1.x project:
 
@@ -633,6 +636,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 
 - Registering a new item or epic logs `"from": null` (trigger = the registering agent's role). Registering a bug logs `"trigger": "{QA | Deploy | Reviewer | Developer | directive: {filename} | hygiene}"` plus `"origin": "{report path or directive filename}"`.
 - A line's `item` may be an item, an epic, or a milestone ID. A milestone transition caused by an epic or item event (its first dispatch, its delivery) carries that event's trigger; one caused by the user carries `decision: user`. A session-wide event (teammates stopped at a usage limit) logs one line per affected item.
+- **One line per transition.** A status change is logged once, with the trigger of its cause (`report: {Role} {OUTCOME}`, `fast-forward`, `batch end`, a directive filename); where section 5 says "decision line `{note}`" on a row that changes a status, that note goes on this same line as `"note"` — never a second line. A separate decision line exists only when no status changes.
 - A recorded deviation from a default (e.g. skipping Designer or the infra phase for an epic) is a **decision line**: `from` and `to` both equal the current status, `"trigger": "decision"`, plus `"note": "{rationale}"`. Extra keys are allowed on any line.
 - **Planning-chain visibility:** planning work changes no statuses, so it is invisible without these two lines. Before dispatching any planning-chain agent (Product Manager, System Analyst, Architect, Designer, Cloud Architect, DevOps Engineer) log a **dispatch line** — `from` == `to` == the epic's current status, `"trigger": "dispatch: {Role}"`, `"note": "{mode/scope, one clause}"`. After verifying its report, log a **completion line** — same shape, `"trigger": "{Role}"`, `"note": "{OUTCOME + one clause}"` — unless the verified report immediately changes a status (then the normal transition line IS the completion record). /status and the tracker read these as the live "who is working now" signal.
 - Bucket moves and archive sweeps are NOT logged — they are consequences of the epic transition, which is.
@@ -649,6 +653,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 | `decision: user` | none, or the milestone transition | the user's ruling, quoted or paraphrased |
 | `recut` | an item's `epic` changes | from-epic → to-epic, the milestone |
 | `batch end` | a PM-initiated epic transition or `batch.stage` change during the batch end (books → `ready_for_deploy`) | the stage and what closed it |
+| `fast-forward` | an item `ready_for_merge` → `done` by the PM's fast-forward | the fixed note `fast-forward: …` |
 | `correction` | none | the lines it voids, and why |
 | `{directive filename}` | as the directive says | — |
 
@@ -661,7 +666,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 | fast lane stages | `QA skipped: fast lane` · `regression QA skipped: fast lane` · `fix pass verified by the PM reading {a}..{b} against {finding ids}` |
 | PM fast-forward | `fast-forward: {feature} {a}..{b}; worktree removed` (+ `; {ITEM-ID} will need a real merge` for each in-flight item now behind) |
 | merge queue | `merge queued behind {ITEM-ID}'s` |
-| batches | `batch cut: {item ids} — {reason}` · `batch end: {stage}` · `batch fix skipped: main-in green, no note chosen` · `gate run {N} red: {step}` · `fix loop bound: {one more run | parked}` · `re-gate skipped: {A} code paths on main, all already on the feature` · `batch {n} delivered: {item ids}; {k} items left` · `refinement skipped: {MS-ID} plan is live` |
+| batches | `batch cut: {item ids} — {reason}` · `batch end: {stage}` · `batch fix skipped: main-in green, no note chosen` · `main-in skipped: main already in the feature` · `gate run {N} red: {step}` · `fix loop bound: {one more run | parked}` · `re-gate skipped: {A} code paths on main, all already on the feature` · `batch {n} delivered: {item ids}; {k} items left` · `refinement skipped: {MS-ID} plan is live` |
 | held | `held: {ID} — {reason}` · `held cleared: {ID} — {answer or directive}` |
 | milestones (on the milestone ID) | `{EPIC-ID} done: {d}/{t} epics delivered` · `milestone complete: {t}/{t} epics delivered` · `recut check failed: {EPIC-ID} gives {k}/{n} stories` |
 | main regression | `main regression: {always | if_main_gained_code | never}, {count} code paths — {dispatched | skipped}` (+ `; override: {reason}` when the PM dispatches anyway) |
@@ -673,7 +678,8 @@ Commit conventions (exact formats):
 
 | Actor | Format |
 |-------|--------|
-| PM state updates | `{PREFIX}: Update state — {ITEM-ID} {old}→{new} [by PM]` (staged and committed by path, section 1) |
+| PM state updates | `{PREFIX}: Update state — {ID} {old}→{new} [by PM]` — `{ID}` an item, an epic or a milestone; a batch-end stage change uses the stages as `{old}`/`{new}`; several items in one step: `{PREFIX}: Update state after dispatch [by PM]` / `{PREFIX}: Update state — {summary} [by PM]` (staged and committed by path, section 1) |
+| PM: an epic reaches `done` (both lanes) | `{PREFIX}: Complete epic {EPIC-ID} [by PM]` |
 | Agent work commits (in worktree) | `{ITEM-ID}: {description} [by {Role}]` |
 | Fix-branch commits (merge fix, batch fix, fix loop) | `{ITEM-ID or EPIC-ID}: {description} [by Developer]` |
 | Planning/infra commits | `{PREFIX}: {description} [by {Role}]` |
@@ -687,7 +693,7 @@ While `process.commit_attribution` is `false` (both presets): no attribution tra
 ## MUST NOT DO
 
 - An agent editing `docs/state/*.json` — under any circumstances, including "just fixing" a stale status it noticed (report it instead).
-- PM applying a transition without a matching agent report with evidence.
+- PM applying a transition without a matching agent report with evidence — the only exceptions are the PM's own mechanical steps, each logged with its trigger: `fast-forward` (an item branch that already contains the feature tip, start.md Merge flow) and `batch end` (the books → `ready_for_deploy` step).
 - Inventing entry fields or statuses not defined here — extend this file first (see docs/extending-sdlc.md).
 - Writing log lines with relative or local times — ISO-8601 UTC only.
 - Deleting an entry from its source file before the destination file is written and parses — move discipline is destination-first, and the tempting "delete first so I don't forget" order turns a crash into data loss.

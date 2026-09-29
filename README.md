@@ -66,14 +66,14 @@ State is sharded so it never outgrows the PM's context (state v2): `epics.json` 
 - **Stories, classic lane:** `todo → in_progress → ready_for_review → in_review → ready_for_qa → in_qa → ready_for_merge → merged → done`, with `review_rejected` / `qa_rejected` looping back to the Developer and `regression_failed` spawning a bug
 - **Stories, fast lane:** `todo → in_progress → ready_for_review → in_review → ready_for_merge → done`, with one `review_rejected` → fix pass → PM diff check
 - **Milestones:** `planned → in_progress → delivered → demoed` — a demo the user decides, linked to whole epics; progress shows in `/agent-sdlc:status` and the tracker
-- **Bugs:** the same statuses with fewer stages by tier — `light`: Developer → merge → regression; `standard`: + one delta review; `critical`: + QA. A bug has no story file or use case: its record (`docs/issues/{EPIC}/bugs/`) is the spec and a regression test is the acceptance criterion
+- **Bugs:** the same statuses with fewer stages — classic lane by tier (`light`: Developer → merge → regression; `standard`: + one delta review; `critical`: + QA); fast lane: `light` Developer → merge, `standard`/`critical` one review round → merge. A bug has no story file or use case: its record (`docs/issues/{EPIC}/bugs/`) is the spec and a regression test is the acceptance criterion
 - **Content tasks:** `todo → creating → ready_for_review → in_review → ready_for_integration → integrating → ready_for_qa → in_qa → ready_for_merge → merged → done`, with rejections routed by `rejection_reason` (content vs integration)
 
 The authoritative definition (transition table, entry schemas, report envelope) is `skills/sdlc-state/SKILL.md`.
 
 ### Round economy (tiers, budgets, follow-ups)
 
-Every story carries a **tier** (`light` / `standard` / `critical`, set by the System Analyst from a signal table) that scales the whole downstream: review lenses, whether QA runs at all (light stories skip it), and the **return budget** — how many rework rounds an item may consume (1 / 2 / 3; bugs 1). At the budget the item is parked and the user decides (one more round, accept, park) instead of the pipeline looping. Non-blocking review findings become **follow-ups** (one file per epic, one line per finding class) that Developers close in passing and a single hygiene bug sweeps at epic end; defects reported by QA or Developers become follow-ups or bugs — never stories. Briefs are capped at their template slots, and the PM's verification is a presence check, not a fourth review (the fast lane's diff read of a fix pass replaces a second review round). Design records: `docs/plans/2026-08-25-round-economy-design.md`, `docs/plans/2026-09-29-fast-lane-design.md`.
+Every story carries a **tier** (`light` / `standard` / `critical`, set by the System Analyst from a signal table) that scales the whole downstream: review lenses, whether QA runs at all (light stories skip it), and the **return budget** — how many rework rounds an item may consume (classic 1 / 2 / 3, bugs 1; fast lane 1 at every tier). At the budget the item is parked and the user decides (one more round, accept, park) instead of the pipeline looping. Non-blocking review findings become **follow-ups** (one file per epic, one line per finding class) that Developers close in passing and, at the epic's (fast: the batch's) end, are either swept by one hygiene bug or triaged — carried by ID, dropped, or folded into the batch fix — per `process.followups_gate`; defects reported by QA or Developers become follow-ups or bugs — never stories. Briefs are capped at their template slots, and the PM's verification is a presence check, not a fourth review (the fast lane's diff read of a fix pass replaces a second review round). Design records: `docs/plans/2026-08-25-round-economy-design.md`, `docs/plans/2026-09-29-fast-lane-design.md`.
 
 ### Git strategy
 
@@ -113,7 +113,7 @@ Two caveats from the Claude Code docs: (1) teammates do NOT inherit the lead's `
 
 ## Upgrading from 1.x
 
-Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Per story, §Whole-tree checks, §Batch end) to your `.claude/rules/quality-gate.md`. Init also writes `.claude/settings.json` attribution settings and enables the attribution hook (set `process.commit_attribution` to `true` to turn it off).
+Run `/agent-sdlc:init` once. It adds a `process` block with the **classic preset** (your pipeline behaves exactly as in 1.6), the new counters and an empty milestones list, then asks one question: switch NEW epics to the fast lane? Epics already in flight always finish on their lane. Before the first fast epic starts, the PM has the Architect add the fast-lane sections (§Lanes, §Whole-tree checks, §Per story, §Review and merge, §Batch end) to your `.claude/rules/quality-gate.md`. Init also writes `.claude/settings.json` attribution settings and enables the attribution hook (set `process.commit_attribution` to `true` to turn it off).
 
 ## Optional dependencies
 
@@ -142,7 +142,7 @@ your-project/
 └── content/                 ← produced content files
 ```
 
-Re-running `/agent-sdlc:init` on a pre-1.2 project migrates `docs/rules/` → `.claude/rules/`, moves templates to `docs/templates/`, repairs the agent registry, and installs the CLAUDE.md block — state files are never touched.
+Re-running `/agent-sdlc:init` on a pre-1.2 project migrates `docs/rules/` → `.claude/rules/`, moves templates to `docs/templates/`, repairs the agent registry, and installs the CLAUDE.md block — state files are never overwritten (the 2.0 repair only adds missing keys and the explicit `parked` marker, see Upgrading from 1.x).
 
 ## Extending
 

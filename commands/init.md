@@ -138,16 +138,38 @@ content/
 
 2.5c. **Repair to v2.0** — run when `project.json` has no `process` key (a project initialized before 2.0). Order is fixed; every edit is additive:
 
-1. Add the **classic preset** `process` block — the `classic preset (= absent)` column of the preset table in sdlc-state section 6, written out as JSON; `shell` from `basename "$SHELL"` (anything but `zsh` → `bash`). With it, every epic behaves exactly as under 1.6.
-2. Counters: add `"note": 0`, `"milestone": 0`, and `"followup"` = the highest follow-up number already used in the project, so new `FU-{n}` numbers never collide with per-epic ones:
+1. Counters: add `"note": 0`, `"milestone": 0`, and `"followup"` = the highest follow-up number already used in the project, so new `FU-{n}` numbers never collide with per-epic ones:
    ```bash
-   cat docs/issues/*/followups.md 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1
+   find docs/issues -name followups.md -exec cat {} + 2>/dev/null | grep -oE 'FU-[0-9]+' | sed 's/FU-//' | sort -n | tail -1
    ```
    Empty output → `0`.
-3. `integrations.runners`: add `{"enabled": false, "tooling_dir": null, "inventory": null}` if missing.
-4. `epics.json`: add `"milestones": {}` and `"milestone_order": []` if missing. Epic entries are NOT touched — an epic without a `lane` stamp is `classic` (sdlc-state section 4, Lanes).
-4b. Parked items: 1.x marked parking by a formula; 2.0 needs the explicit field (sdlc-state section 4). For every entry in `active.json` / `backlog.json` `stories` with status `review_rejected` or `qa_rejected` and `returns` ≥ its 1.x budget (bugs 1; light 1, standard 2, critical 3 — absent tier = standard), add `"parked": true` — conservative: the budget gate's "one more round" frees one that was only owed its last rework. List them in the repair summary.
-5. Verify every file you edited parses (`jq empty docs/state/project.json docs/state/epics.json`), then ask once:
+2. `integrations.runners`: add `{"enabled": false, "tooling_dir": null, "inventory": null}` if missing.
+3. `epics.json`: add `"milestones": {}` and `"milestone_order": []` if missing. Epic entries are NOT touched — an epic without a `lane` stamp is `classic` (sdlc-state section 4, Lanes).
+4. Parked items: 1.x marked parking by a formula; 2.0 needs the explicit field (sdlc-state section 4). For every entry in `active.json` / `backlog.json` `stories` and `content_tasks` with status `review_rejected` or `qa_rejected` and `returns` ≥ its 1.x budget (bugs 1; light 1, standard 2, critical 3 — absent tier = standard), add `"parked": true` — conservative: the budget gate's "one more round" frees one that was only owed its last rework. List them in the repair summary.
+5. Write the `process` block LAST — only after steps 1–4 succeeded — so a run interrupted earlier repeats every step next time (each step adds only what is missing). The classic preset, verbatim (`shell` from `basename "$SHELL"`; anything but `zsh` → `bash`):
+   ```json
+   "process": {
+     "lane": "classic",
+     "main_regression": "always",
+     "docs_only_paths": ["docs/", ".claude/"],
+     "followups_gate": "hygiene_bug",
+     "demo_gate": "blocking",
+     "planning_depth": "all",
+     "deploy_push": "never",
+     "deploy_exclusivity": "per_epic",
+     "max_local_stacks": 2,
+     "report_max_chars": 3500,
+     "commit_attribution": false,
+     "attribution_patterns": ["co-authored-by", "generated with claude", "🤖", "claude-session"],
+     "commit_conventions": null,
+     "shell": "{zsh | bash}",
+     "models": { "default": "inherit" },
+     "standing_brief_lines": { "all": [] },
+     "content_guard": null
+   }
+   ```
+   With it, every epic behaves exactly as under 1.6.
+6. Verify every file you edited parses (`jq empty docs/state/project.json docs/state/epics.json docs/state/active.json docs/state/backlog.json`), then ask once:
 
    > ## agent-sdlc 2.0 — lanes
    > This project now runs on the **classic lane** — exactly the 1.6 pipeline. The **fast lane** proves each story with a targeted set of checks and one review round, and runs the full gate once per batch (usually an epic) before delivering to `main`. Epics already in flight always finish on classic.
@@ -155,7 +177,7 @@ content/
 
    **>>> GATE: user response required. Make NO tool calls in the same message as this question. <<<**
    Acceptable answers: "fast", "classic". Anything else is a question — answer it and gate again. On "fast": set `process.lane` to `fast` and tell the user that the project's `.claude/rules/quality-gate.md` needs the fast-lane sections (§Whole-tree checks, §Per story, §Review and merge, §Batch end — see `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`) before the first fast epic starts; `/agent-sdlc:start` dispatches the Architect for that automatically. The other keys of the classic preset stay — the user may change any of them in `project.json` later.
-6. Commit: `git add -- docs/state && git commit -m "{PREFIX}: Repair state for agent-sdlc 2.0 [by PM]" -- docs/state`.
+7. Commit: `git add -- docs/state && git commit -m "{PREFIX}: Repair state for agent-sdlc 2.0 [by PM]" -- docs/state`.
 
 2.6. **Verify the quality gate seed** — after step 2.3, confirm `.claude/rules/quality-gate.md` exists (it ships in the base rules as a placeholder table the Architect fills during planning). If it is missing, copy it explicitly from `${CLAUDE_PLUGIN_ROOT}/templates/rules/quality-gate.md`.
 
@@ -169,7 +191,7 @@ docs/state/.secrets.json
 ```json
 { "attribution": { "commit": "", "pr": "" } }
 ```
-Empty strings turn off Claude Code's own commit trailer and PR attribution line (`includeCoAuthoredBy` is the deprecated spelling — do not add it). This is the first line of defence; the plugin's `guard-commit.sh` hook denies any trailer that still appears, and the PM's verification checks agent commits (sdlc-dispatch section 3).
+Merge with `f=.claude/settings.json; [ -f "$f" ] || echo '{}' > "$f"; jq '.attribution = ((.attribution // {}) + {"commit": "", "pr": ""})' "$f" > "$f.tmp" && mv "$f.tmp" "$f"`. Empty strings turn off Claude Code's own commit trailer and PR attribution line (`includeCoAuthoredBy` is the deprecated spelling — do not add it). This is the first line of defence; the plugin's `guard-commit.sh` hook denies any trailer that still appears, and the PM's verification checks agent commits (sdlc-dispatch section 3).
 
 2.7c. **Content-guard pre-commit hook** — only when `process.content_guard.pre_commit` is `true`: if `.git/hooks/pre-commit` does not exist, write it and `chmod +x` it:
 ```bash
@@ -206,7 +228,7 @@ This project is driven by the agent-sdlc pipeline.
 <!-- agent-sdlc:end -->
 ```
 
-2.9. **Commit** (by path — sdlc-state section 1): `git add -A -- docs content .claude .gitignore CLAUDE.md` then `git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]" -- docs content .claude .gitignore CLAUDE.md` (migration runs: `"{PREFIX}: Migrate SDLC layout [by PM]"`; the state v2 migration from 2.5b commits separately per its step 6).
+2.9. **Commit** (by path — sdlc-state section 1): `git add -A -- docs content .claude/rules .claude/settings.json .gitignore CLAUDE.md` then `git commit -m "{PREFIX}: Initialize SDLC project structure [by PM]" -- docs content .claude/rules .claude/settings.json .gitignore CLAUDE.md` (never `.claude/settings.local.json` — it is the user's machine-local file) (migration runs: `"{PREFIX}: Migrate SDLC layout [by PM]"`; the state v2 migration from 2.5b commits separately per its step 6).
 
 ## Phase 3: Rules session with the Architect (interactive)
 
