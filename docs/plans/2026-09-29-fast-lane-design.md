@@ -136,8 +136,10 @@ takes, and registers a hygiene bug for larger ones (the batch waits for it) — 
 the gate. **Books** (stage `books`, after the gate is green): every N-line gets its resolution, follow-up outcomes are
 written, then the delivery. Step 6 below is the `books` stage.
 
-1. **Main-in (F5)** in `{EPIC}-merge`: docs and rules take `main`'s side (then `git diff origin/main HEAD -- {docs}`
-   prints nothing), generated files regenerated, code combined, anything else → abort. Green → push the feature;
+1. **Main-in (F5)** in `{EPIC}-merge`: a CONFLICTED docs/rules file takes `main`'s side (main holds the final form of
+   every ruling) and `docs/state` always equals `main`; non-conflicting feature docs and rules (story files, a new
+   whole-tree-check row) are kept and ship; generated files regenerated, code combined, anything else → abort.
+   (Correction during implementation: restoring all of `docs/` from `main` would have wiped the feature's own stories.) Green → push the feature;
    red → push to `fix/{EPIC}-main-in`, VERIFICATION_FAILED.
 2. **Batch fix (F9)** on `fix/{EPIC}-batch`: meeting defects, notes chosen for the batch, cross-cutting obligations;
    PM diff check + fast-forward. Skipped when the main-in was green and no note was chosen (Default, decision line).
