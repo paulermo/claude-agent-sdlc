@@ -97,7 +97,7 @@ git push origin --delete {main-in fix branch}; echo "exit=$?"     # (remote only
 
 | Situation | Action |
 |---|---|
-| A named id is `open`, or the Developer reports BLOCKED | `batch.fix_attempts` < 2: re-dispatch once (+ 1) — a fresh Developer on the same branch naming only the open ids (a design question: a ruling first, `rulings.md`). Second time: an open note → leave it (step 6: `→ FU-{m}`); a defect or BLOCKED → epic `held: "batch fix failed twice"` (decision `held: {EPIC-ID} — batch fix failed twice`, sdlc-state §4 Held), surface to the user |
+| A named id is `open`, or the Developer reports BLOCKED | `batch.fix_attempts` < 2: re-dispatch once (+ 1) — a fresh Developer on the same branch naming only the open ids (a design question: a ruling first, `rulings.md`). `batch.fix_attempts` ≥ 2: an open note → leave it (step 6: `→ FU-{m}`); a defect or BLOCKED → epic `held: "batch fix failed twice"` (decision `held: {EPIC-ID} — batch fix failed twice`, sdlc-state §4 Held), surface to the user |
 | A push is refused | never force: `git -C {merge} fetch origin`, show what moved, surface to the user |
 
 ## 4. Full gate — stage `gate`
