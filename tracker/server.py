@@ -161,12 +161,17 @@ def milestone_progress(epics_doc, active, backlog, archived):
     if not isinstance(milestones, dict) or not milestones:
         return {}
     live_epics = epics_doc.get("epics") or {}
-    items = {}  # id → entry; first bucket wins (active → backlog → archive, as find_entry)
+    arch_epics = archived.get("epics") or {}
+    # One pass over every bucket: id → entry (first bucket wins: active → backlog → archive,
+    # as find_entry) and epic id → its item ids.
+    items, by_epic = {}, {}
     for bucket in (active, backlog, archived):
         for kind in ("stories", "content_tasks"):
             for item_id, entry in (bucket.get(kind) or {}).items():
-                if isinstance(entry, dict):
-                    items.setdefault(item_id, entry)
+                if isinstance(entry, dict) and item_id not in items:
+                    items[item_id] = entry
+                    if isinstance(entry.get("epic"), str):
+                        by_epic.setdefault(entry["epic"], []).append(item_id)
 
     def id_list(value):
         return list(dict.fromkeys(v for v in value if isinstance(v, str))) if isinstance(value, list) else []
@@ -177,10 +182,9 @@ def milestone_progress(epics_doc, active, backlog, archived):
             continue
         epic_ids = id_list(ms.get("epics"))
         # a done epic lives in the archive; a leftover live copy is a stale duplicate
-        statuses = [((archived["epics"].get(eid) or live_epics.get(eid) or {}).get("status")) for eid in epic_ids]
-        linked = set(epic_ids)
-        member_ids = {iid for iid, e in items.items() if e.get("epic") in linked}
-        member_ids.update(iid for iid in id_list(ms.get("stories")) if iid in items)
+        statuses = [((arch_epics.get(eid) or live_epics.get(eid) or {}).get("status")) for eid in epic_ids]
+        member_ids = {iid for eid in epic_ids for iid in by_epic.get(eid, ())}
+        member_ids.update(iid for iid in id_list(ms.get("stories")) if iid in items)  # set: dedups
         members = [(iid, items[iid]) for iid in member_ids]
         planned = ms.get("planned_count")
         out[ms_id] = {

@@ -122,10 +122,24 @@
     ? `<div class="banner">Legacy state layout — run <code>/agent-sdlc:init</code> in this project to migrate to state v2.</div>` : "";
 
   // ---------- milestones (sdlc-state §6: epics.json milestones + milestone_order) ----------
-  const milestones = () => (S.data && S.data.epics.milestones) || {};
+  // Hand-edited state can hold anything: a list that is not an array reads as empty (a string
+  // `epics` must never substring-match), and a milestone that is not an object is dropped.
+  const arr = v => Array.isArray(v) ? v : [];
+  const isObj = v => v != null && typeof v === "object" && !Array.isArray(v);
+  let msCache = null, msCacheFor = null;
+  function milestones() {
+    if (!S.data) return Object.create(null);
+    if (msCacheFor !== S.data) {
+      const raw = S.data.epics && S.data.epics.milestones;
+      msCache = Object.create(null);  // no prototype: all["constructor"] must be undefined
+      if (isObj(raw)) Object.entries(raw).forEach(([id, m]) => { if (isObj(m)) msCache[id] = m; });
+      msCacheFor = S.data;
+    }
+    return msCache;
+  }
   function msOrder() {
-    const all = milestones();
-    const order = (S.data.epics.milestone_order || []).filter(id => all[id]);
+    const all = milestones(), order = [];
+    arr(S.data.epics.milestone_order).forEach(id => { if (all[id] && !order.includes(id)) order.push(id); });
     Object.keys(all).forEach(id => { if (!order.includes(id)) order.push(id); });
     return order;
   }
@@ -133,14 +147,14 @@
   // The epic's own `milestone` field, else the milestone whose `epics` lists it.
   function epicMilestone(id, e) {
     const all = milestones();
-    if (e && e.milestone && all[e.milestone]) return e.milestone;
-    return Object.keys(all).find(m => (all[m].epics || []).includes(id)) || null;
+    if (e && typeof e.milestone === "string" && all[e.milestone]) return e.milestone;
+    return Object.keys(all).find(m => arr(all[m].epics).includes(id)) || null;
   }
   // An item's own `milestone` (the uncut exception), else its epic's.
   function itemMilestone(id, entry) {
     const all = milestones();
-    if (entry.milestone && all[entry.milestone]) return entry.milestone;
-    const listed = Object.keys(all).find(m => (all[m].stories || []).includes(id));
+    if (typeof entry.milestone === "string" && all[entry.milestone]) return entry.milestone;
+    const listed = Object.keys(all).find(m => arr(all[m].stories).includes(id));
     if (listed) return listed;
     const eid = entry.epic;
     return eid ? epicMilestone(eid, (S.data.epics.epics || {})[eid] || (S.data.archived_epics || {})[eid]) : null;
@@ -156,7 +170,7 @@
     if (!b || !b.stage) return "";
     const run = Number(b.gate_run) || 0;
     const label = b.stage === "gate" ? `gate run ${run + 1}` : b.stage === "fix_loop" ? `fix loop · run ${run} red` : String(b.stage).replace(/_/g, " ");
-    const cls = b.stage === "fix_loop" ? "blocked" : b.stage === "gate" ? "qa" : "merge";
+    const cls = { fix_loop: "blocked", gate: "qa", batch_fix: "wip" }[b.stage] || "merge";
     return `<span class="chip batch ${cls}" title="batch ${esc(b.n || 1)} · batch-end stage: ${esc(b.stage)}">${esc(label)}</span>`;
   }
 
@@ -239,20 +253,20 @@
     let needArchive = false;
     view.innerHTML = order.map(id => {
       const m = all[id], p = mp[id] || {};
-      const epicIds = (m.epics || []).filter((x, i, a) => a.indexOf(x) === i);
+      const epicIds = arr(m.epics).filter((x, i, a) => a.indexOf(x) === i);
       const cards = epicIds.map(eid => {
         const e = arch[eid] || live[eid];
         return e ? epicCard(eid, e, d.epic_progress[eid], !!arch[eid], { noMilestone: true })
           : `<div class="card epic-card"><div class="head">${chip("missing", "blocked")}
               <span class="title mono">${esc(eid)}</span></div></div>`;
       }).join("");
-      const stories = (m.stories || []).map(sid => {
+      const stories = arr(m.stories).map(sid => {
         const en = findItem(sid);
         if (!en) needArchive = true;
         return en ? itemRow(sid, en) : `<div class="row" data-item="${esc(sid)}"><span class="id mono">${esc(sid)}</span>
           <span class="t" style="color:var(--muted)">${S.archiveStamp === S.stamp ? "not found" : "loading…"}</span></div>`;
       }).join("");
-      const flight = (p.in_flight || []).map(iid => {
+      const flight = arr(p.in_flight).map(iid => {
         const en = findItem(iid);
         return `<span class="chip mono clicky ${STATUS_CLS[en && en.status] || "wip"}" data-item="${esc(iid)}"
           title="${esc(en ? en.status : "")}">${esc(iid)}</span>`;
@@ -266,7 +280,7 @@
             <span class="target">${m.target ? "target " + esc(m.target) : "no target date"}</span></div>
           ${m.goal ? `<div class="goal">${esc(m.goal)}</div>` : ""}
           <div class="ms-meters">
-            <div><div class="lbl">Epics delivered${esc(awaiting)}</div>${meter({ done: p.epics_done || 0, total: p.epics_total || 0 })}</div>
+            <div><div class="lbl">Epics done${esc(awaiting)}</div>${meter({ done: p.epics_done || 0, total: p.epics_total || 0 })}</div>
             <div><div class="lbl">Items done${planned}</div>${meter({ done: p.items_done || 0, total: p.items_total || 0 })}</div>
           </div>
           ${flight ? `<div class="ms-flight"><span>In flight</span>${flight}</div>` : ""}
