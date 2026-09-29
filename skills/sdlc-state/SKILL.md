@@ -635,7 +635,7 @@ echo '{"item":"{ITEM-ID}","from":"{old}","to":"{new}","by":"pm","at":"{ISO-8601 
 
 | Trigger | Status change | `note` carries |
 |---|---|---|
-| `dispatch: {Role}` / `dispatch: {Role} ({mode})` | none, or the working status | base sha, stack (`local` / `runner {NN} slot {x}` / `none`), model when not inherited, parallel items. Modes: `fix pass`, `merge fix`, `batch fix`, `fix loop`, `main in`, `{EPIC-ID} in`, `delivery`, `full gate`, `regression`, `ruling`, `pre-ruling`, `amendment pass`, `milestone`, `milestone recut`, `milestone slice`, `continuation`, `resumed` |
+| `dispatch: {Role}` / `dispatch: {Role} ({mode})` | none, or the working status | base sha, stack (`local` / `runner {NN} slot {x}` / `none`), model when not inherited, parallel items. Modes: `fix pass`, `merge fix`, `batch fix`, `fix loop`, `main in`, `{EPIC-ID} in`, `delivery`, `full gate`, `regression`, `ruling`, `pre-ruling`, `notes triage`, `amendment pass`, `milestone`, `milestone recut`, `milestone slice`, `continuation`, `resumed` |
 | `report: {Role} {OUTCOME}` | as the transition table says | head sha and counts |
 | `report: Developer ({mode}); PM verified the diff` | as the transition table says | the sha range, each finding → fixed, the counts |
 | `decision` | none | a fixed note (below) or a rationale |
