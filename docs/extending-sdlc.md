@@ -8,7 +8,7 @@ Every capability in the pipeline is split across:
 
 1. **Agent** (`agents/{name}.md`) — the persona: identity, scope (owns / does not own), non-negotiables, report OUTCOME values. Compact; no workflows here.
 2. **Skill** (`skills/{skill-name}/SKILL.md`) — the workflow: numbered steps, exact commands, decision tables, report envelope, MUST/MUST NOT. Depth goes to `references/*.md`.
-3. **Wiring** — the PM must know when to dispatch it and what to say: a row in `commands/start.md`'s dispatch map + a brief template in `skills/sdlc-dispatch/references/briefs.md`.
+3. **Wiring** — the PM must know when to dispatch it and what to say: a row in `commands/start.md`'s dispatch map + a brief template in the role's file under `skills/sdlc-dispatch/references/briefs/` (one file per role; a new role gets its own file and a row in sdlc-dispatch section 1).
 
 Naming law: agent = persona (`Developer`), skill = discipline (`story-implementation`); the names MUST differ.
 
@@ -27,7 +27,7 @@ Naming law: agent = persona (`Developer`), skill = discipline (`story-implementa
    ```
    Body: identity (2-3 lines) → How to operate (skill pointer + brief + rules glob) → Scope → Non-negotiables → Output (report envelope pointer).
 3. **Register** in `commands/init.md`'s project.json registry template (`"{agent-key}": { "file": "...", "stage": "...", "type": "subagent|teammate" }`) — and tell existing projects to re-run `/agent-sdlc:init` (it merges missing registry entries).
-4. **Wire the PM**: add the dispatch-map row(s) in `commands/start.md` (status → agent → status-to-set), the agent name row in `skills/sdlc-dispatch/SKILL.md`, and a brief template in `skills/sdlc-dispatch/references/briefs.md` with the five mandatory sections (WHY / INPUTS / DISCIPLINE / DELIVERABLE / VERIFICATION).
+4. **Wire the PM**: add the dispatch-map row(s) in `commands/start.md` (lane → status → agent → status-to-set), the agent name + brief file + model key row in `skills/sdlc-dispatch/SKILL.md` section 1, and a brief template in `skills/sdlc-dispatch/references/briefs/{role}.md` using the slot order of sdlc-dispatch section 1 (WHY · KIND/TIER/ROUND with `LANE:` · WORKTREE · CARRIED IN · INPUTS · SELECTION/CHECKS · STACK · DISCIPLINE ending in `{standing lines}` · DELIVERABLE · VERIFICATION · REPORT with `{cap}`).
 
 ## Adding a new task type
 
@@ -37,6 +37,14 @@ A kind that shares the story machine — like `bug` — is NOT a new task type: 
 2. Create `docs/state/{type}-tasks.json` (seed `{}` in init.md) and define the entry schema in `skills/sdlc-state/SKILL.md` §5 — that file is the single source of truth for shapes.
 3. Define the status machine in `skills/sdlc-state/SKILL.md` §3 and its transitions in §4 (who dispatches, which OUTCOME moves it where).
 4. Add dispatch-map rows in `commands/start.md` and brief templates for the handling agents.
+
+## Adding a lane-dependent rule
+
+The fast and classic lanes differ in exactly the rows of the lane table in `skills/sdlc-state/SKILL.md` section 4 (Lanes). A new behaviour that depends on the lane is a new row there first; then a `Lane` value on the affected transition rows (section 5) and dispatch-map rows (`commands/start.md`); then the skills cite the lane table instead of restating the condition. A behaviour that should be configurable independently of the lane is a `process` key instead: add it to the schema table in sdlc-state section 6 with its fast-preset and classic-preset values (absent keys read as the classic preset), to `commands/init.md`'s template, and to its readers.
+
+## Adding a procedure the PM runs occasionally
+
+Long, situational PM procedures (the batch end, rulings, milestones, recovery) live in `skills/sdlc-dispatch/references/{name}.md` and are listed in sdlc-dispatch section 0's "Load when" table — never inline in `commands/start.md`, which the PM carries in every session. `start.md` keeps a one-paragraph pointer.
 
 ## Adding or changing statuses
 
