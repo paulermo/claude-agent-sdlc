@@ -212,7 +212,7 @@ Merge fix for {ITEM-ID} against {EPIC-ID}'s feature — not a story, not a bug: 
 WHY: {what Deploy's merge showed — the collision, e.g. a caller left on a changed signature, a test double missing a new method}.
 
 KIND: {kind} · TIER: {tier} · LANE: fast
-WORKTREE: {{worktree_dir}/{ITEM-ID}-merge-fix, branch {fix branch} — exactly as Deploy's report names it (fix/{ITEM-ID}-merge or fix/{ITEM-ID}-merge-{k}) — at {resolved merge sha} | {worktree}, branch {branch} at {head sha} — merge `origin/{feature-branch}` at {feature sha} into it first}. Work ONLY there.
+WORKTREE: {{worktree_dir}/{ITEM-ID}-merge-fix, branch {fix branch} — exactly as Deploy's report names it (fix/{ITEM-ID}-merge or fix/{ITEM-ID}-merge-{k}) — at {resolved merge sha} | {worktree}, branch {branch} at {head sha} — merge {feature sha} (the feature's tip) into it first}. Work ONLY there.
 REPORTS: {reports} — tool output, logs and report files go here, outside every worktree.
 CARRIED IN: {Deploy's failures, grouped by cause: failing command → first message line; the files each side changed}.
 
